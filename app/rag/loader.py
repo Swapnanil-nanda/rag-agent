@@ -112,7 +112,7 @@ def load_pdf(file_path: str | Path, session_id: str = "default") -> list[Documen
             if table_md:
                 text = (text + table_md).strip()
 
-            should_ocr = len(text.strip()) < 400 or len(text.split()) < 50 or bool(page.get_images())
+            should_ocr = len(text.strip()) < 100 or len(text.split()) < 15
             if should_ocr:
                 try:
                     pix = page.get_pixmap(dpi=150)
