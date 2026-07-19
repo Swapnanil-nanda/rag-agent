@@ -165,8 +165,11 @@ def retrieve_documents(session_id: str, query: str, k: int = 4, threshold: Optio
     fused_docs = [doc_map[d_id] for d_id in sorted_doc_ids]
 
     if threshold is not None and threshold > 0.0:
-        threshold_percent = int(threshold * 100)
-        fused_docs = [d for d in fused_docs if d.metadata.get("score", 100) >= threshold_percent]
+        effective_threshold = min(threshold, 0.85)
+        threshold_percent = int(effective_threshold * 100)
+        filtered = [d for d in fused_docs if d.metadata.get("score", 100) >= threshold_percent]
+        if filtered:
+            fused_docs = filtered
 
     reranked_docs = _cross_encoder_rerank(query, fused_docs, top_k=k)
     return _reorder_lost_in_middle(reranked_docs)

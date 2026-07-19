@@ -39,7 +39,8 @@ def get_llm() -> ChatOpenAI | None:
             base_url="https://openrouter.ai/api/v1",
             model=settings.openrouter_model,
             temperature=0.3,
-            max_retries=1,
+            max_tokens=4096,
+            max_retries=2,
         )
     if not settings.openai_api_key or settings.openai_api_key.startswith("mock"):
         return None
@@ -47,7 +48,8 @@ def get_llm() -> ChatOpenAI | None:
         api_key=settings.openai_api_key,
         model=settings.llm_model,
         temperature=0.3,
-        max_retries=1,
+        max_tokens=4096,
+        max_retries=2,
     )
 
 def build_chain():
