@@ -5,6 +5,8 @@ from langchain_core.documents import Document
 
 _ocr_engine = None
 
+import gc
+
 def get_ocr_engine():
     global _ocr_engine
     if _ocr_engine is None:
@@ -24,6 +26,8 @@ def _ocr_pixmap(pix: fitz.Pixmap) -> str:
             pix = fitz.Pixmap(fitz.csRGB, pix)
         img_np = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.h, pix.w, 3))
         results, _ = engine(img_np)
+        del img_np
+        gc.collect()
         if results:
             return "\n".join([res[1] for res in results if res and len(res) > 1 and res[1]])
     except Exception:

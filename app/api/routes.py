@@ -217,7 +217,9 @@ async def ingest(session_id: str, file: UploadFile = File(...)):
             metadata["title"] = filename.rsplit(".", 1)[0][:30]
         suggested = await generate_suggested_questions(chunks)
         metadata["suggested_questions"] = suggested
+        import gc
         save_metadata(session_id, metadata)
+        gc.collect()
         return IngestResponse(
             session_id=session_id,
             message="Document ingested successfully",
