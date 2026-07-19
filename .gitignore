@@ -1,0 +1,28 @@
+# Environment & Secrets
+.env
+*.env
+.venv
+env/
+venv/
+ENV/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases & uploaded media
+vectorstore/
+documents/*
+!documents/.gitkeep
+app/static/media/*
+!app/static/media/.gitkeep
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp

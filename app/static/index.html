@@ -1,0 +1,2268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Context Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #080911;
+            --sidebar-bg: rgba(13, 16, 27, 0.85);
+            --chat-bg: #090B15;
+            --border-color: rgba(255, 255, 255, 0.06);
+            --text-main: #F3F4F6;
+            --text-muted: #8E98B0;
+            --primary: #45D1E8;
+            --primary-hover: #37B9CE;
+            --accent: #10B981;
+            --accent-error: #EF4444;
+            --cyan-grad: linear-gradient(135deg, #45D1E8 0%, #3B82F6 100%);
+            --bot-bubble-bg: rgba(255, 255, 255, 0.02);
+            --transition-speed: 0.3s;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% -20%, rgba(69, 209, 232, 0.12) 0%, transparent 60%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+        }
+        .page-container {
+            display: none;
+            flex-direction: column;
+            min-height: calc(100vh - 32px);
+            width: 100%;
+        }
+        .page-container.active {
+            display: flex;
+        }
+        #workspacePage {
+            height: calc(100vh - 32px);
+            min-height: calc(100vh - 32px);
+            overflow: hidden;
+        }
+        header {
+            height: 65px;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(8, 9, 17, 0.8);
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            cursor: pointer;
+        }
+        .logo-icon {
+            width: 26px;
+            height: 26px;
+            background: #1D4ED8;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: white;
+        }
+        .logo-text {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.2px;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .nav-link {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color var(--transition-speed);
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-main);
+        }
+        .api-status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.3rem 0.65rem;
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+        }
+        .api-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--accent-error);
+        }
+        .api-status-dot.online {
+            background-color: var(--accent);
+            box-shadow: 0 0 6px var(--accent);
+        }
+        .landing-hero {
+            max-width: 800px;
+            margin: 4.5rem auto 2.5rem auto;
+            text-align: center;
+            padding: 0 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .hero-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.35rem 0.75rem;
+            border-radius: 50px;
+        }
+        .landing-hero h2 {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -1.2px;
+            color: var(--text-main);
+        }
+        @media (max-width: 600px) {
+            .landing-hero h2 {
+                font-size: 2.2rem;
+            }
+        }
+        .landing-hero p {
+            font-size: 1rem;
+            line-height: 1.55;
+            color: var(--text-muted);
+            max-width: 580px;
+        }
+        .hero-buttons {
+            display: flex;
+            gap: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        .btn {
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.7rem 1.35rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            outline: none;
+            text-decoration: none;
+        }
+        .btn-cyan {
+            background: var(--primary);
+            color: #06080F;
+            border: none;
+        }
+        .btn-cyan:hover {
+            background: var(--primary-hover);
+        }
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .tech-logos {
+            display: flex;
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+            opacity: 0.5;
+        }
+        .tech-logos svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            color: var(--text-muted);
+        }
+        .preview-card {
+            max-width: 650px;
+            width: calc(100% - 3rem);
+            margin: 1.5rem auto 4.5rem auto;
+            background: rgba(13, 16, 27, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: left;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .preview-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .preview-card-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        .grounded-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .preview-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+        .preview-question {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+        .sources-indicator {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .preview-answer {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+        .landing-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(8, 9, 17, 0.4);
+        }
+        .workspace-layout {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 97px);
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 300px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), margin-left var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(20px);
+            z-index: 50;
+        }
+        .sidebar.collapsed {
+            margin-left: -300px;
+            transform: translateX(-300px);
+        }
+        .sidebar-logo-block {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-logo {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .close-sidebar-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .close-sidebar-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+        .sidebar-content {
+            flex: 1;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+        .clear-history-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.65rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .clear-history-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--primary);
+        }
+        .sidebar-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .dropzone {
+            border: 1.5px dashed rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.005);
+        }
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--primary);
+            background: rgba(69, 209, 232, 0.04);
+        }
+        .dropzone svg {
+            width: 24px;
+            height: 24px;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .dropzone p {
+            font-size: 0.8rem;
+            color: var(--text-main);
+            margin-bottom: 0.15rem;
+        }
+        .dropzone span {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .file-input {
+            display: none;
+        }
+        .upload-status {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            display: none;
+            word-break: break-all;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .control-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+        .control-group input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            outline: none;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.08);
+            transition: .25s;
+            border-radius: 18px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .25s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .chat-main {
+            flex: 1;
+            background-color: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            height: 100%;
+        }
+        .workspace-header {
+            height: 55px;
+            padding: 0 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(9, 11, 21, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        .header-left-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.35rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .menu-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+        .workspace-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .chat-feed {
+            flex: 1;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .chat-width-limit {
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .message-row {
+            display: flex;
+            width: 100%;
+            gap: 1rem;
+            animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .message-row.user {
+            flex-direction: row-reverse;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            border: 1px solid var(--border-color);
+        }
+        .message-row.user .avatar {
+            background: var(--cyan-grad);
+            color: #06080F;
+            border: none;
+        }
+        .message-row.bot .avatar {
+            background: rgba(255, 255, 255, 0.03);
+            color: #45D1E8;
+        }
+        .bubble-container {
+            max-width: 82%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .bubble {
+            padding: 0.8rem 1.1rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+        .message-row.user .bubble {
+            background: var(--cyan-grad);
+            color: #06080F;
+            border-top-right-radius: 2px;
+            box-shadow: 0 4px 15px rgba(69, 209, 232, 0.12);
+        }
+        .message-row.bot .bubble {
+            background: var(--bot-bubble-bg);
+            color: var(--text-main);
+            border-top-left-radius: 2px;
+            border: 1px solid var(--border-color);
+        }
+        .suggested-workspace-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: auto;
+            text-align: center;
+            gap: 1.5rem;
+            max-width: 480px;
+            animation: fadeIn 0.4s ease;
+        }
+        .suggested-workspace-panel h3 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            color: var(--text-main);
+        }
+        .suggested-workspace-panel p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+        .suggested-cards-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            width: 100%;
+        }
+        .workspace-suggested-card {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.85rem 1.15rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.25s;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .workspace-suggested-card:hover {
+            border-color: var(--primary);
+            background: rgba(69, 209, 232, 0.03);
+            color: var(--text-main);
+            transform: translateY(-1px);
+        }
+        .workspace-suggested-card svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: all 0.2s;
+        }
+        .workspace-suggested-card:hover svg {
+            opacity: 1;
+            color: var(--primary);
+            transform: translateX(2px);
+        }
+        .sources-wrapper {
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .sources-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            outline: none;
+        }
+        .sources-toggle-btn svg {
+            width: 12px;
+            height: 12px;
+            transition: transform var(--transition-speed);
+        }
+        .sources-toggle-btn.open svg {
+            transform: rotate(180deg);
+        }
+        .sources-content-items {
+            display: none;
+            margin-top: 0.5rem;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .sources-content-items.open {
+            display: flex;
+            animation: slideDown 0.2s ease-out;
+        }
+        .workspace-source-card {
+            background: rgba(255, 255, 255, 0.012);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        .source-meta-label {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 0.15rem;
+            font-size: 0.7rem;
+        }
+        .source-content-body {
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+        .chat-input-container {
+            padding: 1.5rem;
+            background: linear-gradient(180deg, transparent 0%, var(--chat-bg) 60%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+        .chat-input-layout {
+            max-width: 700px;
+            width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .chat-textarea {
+            width: 100%;
+            background: rgba(13, 16, 27, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 0.8rem 3.5rem 0.8rem 1.25rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all var(--transition-speed) ease;
+        }
+        .chat-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(69, 209, 232, 0.08);
+            background: rgba(13, 16, 27, 0.9);
+        }
+        .chat-submit-btn {
+            position: absolute;
+            right: 6px;
+            background: var(--cyan-grad);
+            border: none;
+            color: #06080F;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-submit-btn:hover {
+            opacity: 0.95;
+            transform: scale(1.03);
+        }
+        .chat-submit-btn:active {
+            transform: scale(0.96);
+        }
+        .chat-submit-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: #06080F;
+        }
+        .chat-submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .footnote-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        .typing-bubble-animation {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+        }
+        .typing-bubble-animation span {
+            width: 5px;
+            height: 5px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-bubble-animation span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-bubble-animation span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .bubble h1, .bubble h2, .bubble h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            margin-bottom: 0.25rem;
+            color: var(--primary);
+        }
+        .bubble ul, .bubble ol {
+            margin-left: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .bubble p {
+            margin-bottom: 0.5rem;
+        }
+        .bubble p:last-child {
+            margin-bottom: 0;
+        }
+        .bubble code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+        .bubble pre {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+        .session-item, .doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .session-item:hover, .doc-item:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .session-item.active {
+            border-color: var(--primary);
+            background: rgba(69, 209, 232, 0.05);
+            color: var(--text-main);
+        }
+        .session-title-text, .doc-title-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            margin-right: 0.5rem;
+            font-weight: 500;
+        }
+        .delete-item-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            outline: none;
+        }
+        .delete-item-btn:hover {
+            color: var(--accent-error);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .export-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            color: var(--text-main);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .export-btn:hover {
+            background: rgba(69, 209, 232, 0.1);
+            border-color: var(--primary);
+            color: var(--text-main);
+        }
+        @media (max-width: 768px) {
+            .export-btn span {
+                display: none;
+            }
+            .export-btn {
+                padding: 0.4rem 0.5rem;
+            }
+            .visualizer-panel.open {
+                width: 100%;
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+            }
+        }
+        /* AI News Ticker Bar */
+        .news-ticker-bar {
+            height: 32px;
+            background: rgba(69, 209, 232, 0.06);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            font-size: 0.7rem;
+            color: var(--primary);
+            overflow: hidden;
+            position: relative;
+            z-index: 100;
+        }
+        .news-ticker-label {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--primary);
+            color: #000;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        .news-ticker-content {
+            display: flex;
+            animation: tickerMove 30s linear infinite;
+            white-space: nowrap;
+            gap: 3rem;
+        }
+        @keyframes tickerMove {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+        }
+        .news-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        /* Vector Space Visualizer */
+        .visualizer-panel {
+            width: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            flex-shrink: 0;
+            z-index: 40;
+        }
+        .visualizer-panel.open {
+            width: 48%;
+        }
+        .visualizer-header {
+            height: 55px;
+            padding: 0 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(9, 11, 21, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        .visualizer-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .visualizer-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+            border-radius: 6px;
+        }
+        .visualizer-close-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        #vectorCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        .node-tooltip {
+            padding: 0.75rem 1rem;
+            background: rgba(13, 16, 27, 0.95);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            min-height: 80px;
+            max-height: 120px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+        /* See How It Works Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-card {
+            width: 90%;
+            max-width: 650px;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: 85vh;
+        }
+        .modal-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(9, 11, 21, 0.4);
+        }
+        .modal-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            outline: none;
+            line-height: 1;
+        }
+        .modal-close-btn:hover {
+            color: var(--text-main);
+        }
+        .modal-body {
+            padding: 1.25rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .doc-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+        .doc-tab {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            outline: none;
+        }
+        .doc-tab.active {
+            background: var(--primary);
+            color: #000;
+        }
+        .doc-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+        .doc-tab-content {
+            display: none;
+            line-height: 1.5;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .doc-tab-content.active {
+            display: block;
+        }
+        .doc-tab-content h4 {
+            color: var(--text-main);
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .diagram-placeholder {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+        }
+        .diagram-placeholder pre {
+            margin: 0;
+            line-height: 1.4;
+        }
+        .doc-tab-content ul {
+            padding-left: 1.25rem;
+            margin: 0.5rem 0 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="news-ticker-bar">
+        <span class="news-ticker-label">Live RAG Network</span>
+        <div class="news-ticker-content" id="newsTickerContent">
+            <span><strong>[AI ENGINE]</strong> Loading workspace news items from API...</span>
+        </div>
+    </div>
+
+    <div class="page-container active" id="landingPage">
+        <header>
+            <div class="logo-section" onclick="showPage('landing')">
+                <div class="logo-icon">C</div>
+                <div class="logo-text">Context Engine</div>
+            </div>
+            <div class="nav-links">
+                <span class="nav-link" onclick="showPage('landing')">Workspace</span>
+            </div>
+            <div class="api-status-badge">
+                <div id="landingStatusDot" class="api-status-dot"></div>
+                <span id="landingStatusText">Workspace Connecting</span>
+            </div>
+        </header>
+
+        <section class="landing-hero">
+            <div class="hero-tag">Grounded research, one question away</div>
+            <h2>Ask better questions. Find<br>answers you can verify.</h2>
+            <p>Bring your PDFs into one focused research workspace. Ask naturally, trace every claim back to its source, and keep the model grounded in the documents you trust.</p>
+            <div class="hero-buttons">
+                <button class="btn btn-cyan" onclick="showPage('workspace')">Open research workspace</button>
+                <button class="btn btn-outline" onclick="showPage('workspace')">See how it works</button>
+            </div>
+            <div class="tech-logos">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            </div>
+        </section>
+
+        <section class="preview-card">
+            <div class="preview-card-header">
+                <div class="preview-card-title">Research question</div>
+                <div class="grounded-badge">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <circle cx="12" cy="12" r="10" fill="#10B981"/>
+                    </svg>
+                    <span>grounded</span>
+                </div>
+            </div>
+            <div class="preview-label">Question</div>
+            <div class="preview-question">What are the key safeguards that keep this system grounded in its sources?</div>
+            <div class="sources-indicator">4 sources selected - evidence ready</div>
+            <div class="preview-label">Answer with citations</div>
+            <div class="preview-answer">The system limits generation to retrieved passages, ranks evidence before prompting the model, and returns a clear not-found response whenever the indexed documents do not support an answer. Each response remains connected to the source context used to generate it.</div>
+        </section>
+
+        <footer class="landing-footer">
+            <div>Context Engine &bull; Python 3.12 RAG API</div>
+            <div>FastAPI &bull; LangChain &bull; FAISS &bull; OpenAI</div>
+        </footer>
+    </div>
+
+    <div class="page-container" id="workspacePage">
+        <header>
+            <div class="logo-section" onclick="showPage('landing')">
+                <div class="logo-icon">C</div>
+                <div class="logo-text">Context Engine</div>
+            </div>
+            <div class="nav-links">
+                <span class="nav-link" onclick="showPage('landing')">Home</span>
+                <span class="nav-link active" onclick="showPage('workspace')">Workspace</span>
+            </div>
+            <div class="api-status-badge">
+                <div id="workspaceStatusDot" class="api-status-dot"></div>
+                <span id="workspaceStatusText">Connecting...</span>
+            </div>
+        </header>
+
+        <div class="workspace-layout">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-logo-block">
+                    <div class="sidebar-logo">Workspace Settings</div>
+                    <button class="close-sidebar-btn" id="closeSidebarBtn">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="sidebar-content">
+                    <div>
+                        <button class="clear-history-btn" id="newChatBtn" style="margin-bottom: 0.75rem; border-color: var(--primary); background: rgba(69, 209, 232, 0.05); color: var(--primary);">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            <span>New Chat</span>
+                        </button>
+                        <h3 class="sidebar-section-title">Active Chats</h3>
+                        <div id="sessionsList" style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 180px; overflow-y: auto; margin-bottom: 0.75rem; padding-right: 2px;"></div>
+                    </div>
+
+                    <button class="clear-history-btn" id="clearChatBtn" style="margin-bottom: 0.25rem;">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        <span>Clear History</span>
+                    </button>
+
+                    <div>
+                        <h3 class="sidebar-section-title">Knowledge Source</h3>
+                        <div class="dropzone" id="dropzone">
+                            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                            </svg>
+                            <p>Ingest PDF</p>
+                            <span>Click or drag file</span>
+                        </div>
+                        <input type="file" id="fileInput" class="file-input" accept=".pdf">
+                        <div class="upload-status" id="uploadStatus" style="margin-top: 0.5rem; margin-bottom: 0.5rem;"></div>
+                        <div id="documentsList" style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 120px; overflow-y: auto; margin-top: 0.5rem; padding-right: 2px;"></div>
+                    </div>
+
+                    <div>
+                        <h3 class="sidebar-section-title">Retrieval Controls</h3>
+                        <div class="control-group" style="margin-bottom: 1rem;">
+                            <label>
+                                <span>Top-K Chunks</span>
+                                <span id="kVal">4</span>
+                            </label>
+                            <input type="range" id="kRange" min="1" max="10" value="4">
+                        </div>
+
+                        <div class="control-group">
+                            <label>
+                                <span>Relevance Floor</span>
+                                <span id="thresholdVal">Auto</span>
+                            </label>
+                            <input type="range" id="thresholdRange" min="0" max="100" value="0">
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+
+            <main class="chat-main">
+                <header class="workspace-header">
+                    <div class="header-left-group">
+                        <button class="menu-toggle-btn" id="menuToggleBtn">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+                            </svg>
+                        </button>
+                        <div class="workspace-title">Research Workspace</div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="export-btn" id="howItWorksBtn">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                            </svg>
+                            <span>How it Works</span>
+                        </button>
+                        <button class="export-btn" id="toggleVisualizerBtn">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <circle cx="5" cy="6" r="1.5" fill="currentColor"/>
+                                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                                <circle cx="19" cy="8" r="1.5" fill="currentColor"/>
+                                <circle cx="9" cy="14" r="1.5" fill="currentColor"/>
+                                <circle cx="16" cy="15" r="1.5" fill="currentColor"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18" />
+                            </svg>
+                            <span>Vector Map</span>
+                        </button>
+                        <button class="export-btn" id="exportChatBtn">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            <span>Export</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="chat-feed" id="chatFeed">
+                    <div class="chat-width-limit" id="chatWidthLimit">
+                        <div class="suggested-workspace-panel" id="suggestedPanel">
+                            <h3>Context Engine Workspace</h3>
+                            <p>Upload a PDF document in the side control panel, then ask any question. The local retriever will fetch facts and synthesize a natural response.</p>
+                            <div class="suggested-cards-layout">
+                                <div class="workspace-suggested-card" data-query="What is the recommended asset allocation?">
+                                    <span>What is the recommended asset allocation?</span>
+                                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                                </div>
+                                <div class="workspace-suggested-card" data-query="What is the target growth rate of equities?">
+                                    <span>What is the target growth rate of equities?</span>
+                                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                                </div>
+                                <div class="workspace-suggested-card" data-query="What is the drawdown risk during bear markets?">
+                                    <span>What is the drawdown risk during bear markets?</span>
+                                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="chat-input-layout">
+                        <input type="text" id="queryInput" class="chat-textarea" placeholder="Ask a question about the PDF...">
+                        <button id="sendBtn" class="chat-submit-btn">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="footnote-text">Local RAG Console &bull; Private and offline data indexing</div>
+                </div>
+            </main>
+            <!-- Interactive Vector Visualizer Panel -->
+            <div class="visualizer-panel" id="visualizerPanel">
+                <div class="visualizer-header">
+                    <span class="visualizer-title">2D Vector Space Map</span>
+                    <button class="visualizer-close-btn" id="closeVisualizerBtn">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="vectorCanvas"></canvas>
+                </div>
+                <div class="node-tooltip" id="nodeTooltip">Ingest a PDF file to visualize search nodes mapped in vector space.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- See How It Works Modal -->
+    <div class="modal-overlay" id="howItWorksModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>See How It Works</h3>
+                <button class="modal-close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="doc-tabs">
+                    <button class="doc-tab active" data-tab="architecture">Architecture</button>
+                    <button class="doc-tab" data-tab="workflows">Workflows</button>
+                    <button class="doc-tab" data-tab="code">Core Code</button>
+                    <button class="doc-tab" data-tab="github">GitHub</button>
+                </div>
+                <div class="doc-tab-content active" id="tab-architecture">
+                    <h4>Pipeline Diagram</h4>
+                    <p>Our workspace uses a dual-engine architecture: combining fast cloud models with a high-efficiency offline keyword fallback mechanism.</p>
+                    <div class="diagram-placeholder">
+                        <pre style="text-align: left; font-family: monospace; font-size: 0.7rem; color: var(--primary);">
+[PDF] -> [PyMuPDF Fitz Parser] -> [384D Embeddings] -> [FAISS Vector Index]
+                                                              |
+[Query] -> [Gemini API / OpenRouter] --(Failover)--> [TF-IDF Keyword Highlighter]
+                        </pre>
+                    </div>
+                </div>
+                <div class="doc-tab-content" id="tab-workflows">
+                    <h4>RAG Execution Steps</h4>
+                    <ul>
+                        <li><strong>Extraction</strong>: Sub-millisecond text and figure extraction using fitz (PyMuPDF) instead of slower Python parsers.</li>
+                        <li><strong>Projection Matrix</strong>: An exact PCA matrix implementation reduces HuggingFace's 384D vectors to 2D chart coordinates in real-time.</li>
+                        <li><strong>Relevance Scoring</strong>: FAISS filters matches using cosine similarity, with coordinates returned to render visual activated paths.</li>
+                    </ul>
+                </div>
+                <div class="doc-tab-content" id="tab-code">
+                    <h4>Key Fallback Code</h4>
+                    <pre style="text-align: left; background: rgba(0, 0, 0, 0.4); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 0.65rem; color: var(--text-main); overflow-x: auto;">
+# dynamic sentence weighting fallback
+def _fallback_answer(question, docs):
+    words = [w.lower() for w in question.split()]
+    ...
+    return formatted_source_citations
+                    </pre>
+                </div>
+                <div class="doc-tab-content" id="tab-github">
+                    <h4>GitHub Code Repository</h4>
+                    <div style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.02); margin-top: 0.5rem;">
+                        <strong style="color: var(--primary);">github.com/RAG-Agent/Workspace</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Includes local embedding loaders, FAISS backend indexing files, and the vanilla glassmorphism frontend layout.</p>
+                        <a href="https://github.com" target="_blank" class="export-btn" style="display: inline-flex; margin-top: 0.5rem; text-decoration: none;">Clone Repository</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const landingPage = document.getElementById('landingPage');
+        const workspacePage = document.getElementById('workspacePage');
+        const landingStatusDot = document.getElementById('landingStatusDot');
+        const landingStatusText = document.getElementById('landingStatusText');
+        const workspaceStatusDot = document.getElementById('workspaceStatusDot');
+        const workspaceStatusText = document.getElementById('workspaceStatusText');
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const kRange = document.getElementById('kRange');
+        const kVal = document.getElementById('kVal');
+        const thresholdRange = document.getElementById('thresholdRange');
+        const thresholdVal = document.getElementById('thresholdVal');
+
+        const queryInput = document.getElementById('queryInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatFeed = document.getElementById('chatFeed');
+        const chatWidthLimit = document.getElementById('chatWidthLimit');
+        const sidebar = document.getElementById('sidebar');
+        const menuToggleBtn = document.getElementById('menuToggleBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        const suggestedPanel = document.getElementById('suggestedPanel');
+        
+        const newChatBtn = document.getElementById('newChatBtn');
+        const sessionsList = document.getElementById('sessionsList');
+        const documentsList = document.getElementById('documentsList');
+        const exportChatBtn = document.getElementById('exportChatBtn');
+        const visualizerPanel = document.getElementById('visualizerPanel');
+        const toggleVisualizerBtn = document.getElementById('toggleVisualizerBtn');
+        const closeVisualizerBtn = document.getElementById('closeVisualizerBtn');
+        const vectorCanvas = document.getElementById('vectorCanvas');
+        const nodeTooltip = document.getElementById('nodeTooltip');
+        const howItWorksBtn = document.getElementById('howItWorksBtn');
+        const howItWorksModal = document.getElementById('howItWorksModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        let isUserScrolledUp = false;
+
+        howItWorksBtn.addEventListener('click', () => {
+            howItWorksModal.classList.add('open');
+        });
+        closeModalBtn.addEventListener('click', () => {
+            howItWorksModal.classList.remove('open');
+        });
+        howItWorksModal.addEventListener('click', (e) => {
+            if (e.target === howItWorksModal) {
+                howItWorksModal.classList.remove('open');
+            }
+        });
+        
+        document.querySelectorAll('.doc-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.doc-tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+            });
+        });
+        
+        toggleVisualizerBtn.addEventListener('click', () => {
+            visualizerPanel.classList.toggle('open');
+            setTimeout(resizeCanvas, 320);
+        });
+        closeVisualizerBtn.addEventListener('click', () => {
+            visualizerPanel.classList.remove('open');
+        });
+
+        const ctx = vectorCanvas.getContext('2d');
+        let chunkNodes = [];
+        let hoveredNodeIndex = -1;
+        let activatedNodeIndices = new Set();
+        
+        function resizeCanvas() {
+            if (!vectorCanvas.parentElement) return;
+            const rect = vectorCanvas.parentElement.getBoundingClientRect();
+            vectorCanvas.width = rect.width * window.devicePixelRatio;
+            vectorCanvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            drawCanvas();
+        }
+        
+        function getScreenCoords(x, y, w, h) {
+            const pad = 40;
+            const screenX = pad + ((x + 1) / 2) * (w - 2 * pad);
+            const screenY = pad + ((y + 1) / 2) * (h - 2 * pad);
+            return { x: screenX, y: screenY };
+        }
+        
+        function drawCanvas() {
+            ctx.clearRect(0, 0, vectorCanvas.width, vectorCanvas.height);
+            const w = vectorCanvas.width / window.devicePixelRatio;
+            const h = vectorCanvas.height / window.devicePixelRatio;
+            
+            if (chunkNodes.length === 0) {
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText("No vectors loaded. Upload a PDF first.", w / 2, h / 2);
+                return;
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < chunkNodes.length; i++) {
+                const pt1 = getScreenCoords(chunkNodes[i].x, chunkNodes[i].y, w, h);
+                for (let j = i + 1; j < chunkNodes.length; j++) {
+                    const pt2 = getScreenCoords(chunkNodes[j].x, chunkNodes[j].y, w, h);
+                    const dist = Math.hypot(pt1.x - pt2.x, pt1.y - pt2.y);
+                    if (dist < 90) {
+                        ctx.beginPath();
+                        ctx.moveTo(pt1.x, pt1.y);
+                        ctx.lineTo(pt2.x, pt2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            chunkNodes.forEach((node, index) => {
+                const pt = getScreenCoords(node.x, node.y, w, h);
+                const isHovered = (index === hoveredNodeIndex);
+                const isActivated = activatedNodeIndices.has(index);
+                
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, isHovered ? 7 : 4.5, 0, 2 * Math.PI);
+                
+                if (isActivated) {
+                    ctx.fillStyle = '#22D3EE';
+                    ctx.shadowColor = '#22D3EE';
+                    ctx.shadowBlur = 10;
+                } else if (isHovered) {
+                    ctx.fillStyle = '#E11D48';
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+            ctx.shadowBlur = 0;
+        }
+        
+        vectorCanvas.addEventListener('mousemove', (e) => {
+            const rect = vectorCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const w = rect.width;
+            const h = rect.height;
+            
+            let found = -1;
+            for (let i = 0; i < chunkNodes.length; i++) {
+                const pt = getScreenCoords(chunkNodes[i].x, chunkNodes[i].y, w, h);
+                const dist = Math.hypot(pt.x - mouseX, pt.y - mouseY);
+                if (dist < 8) {
+                    found = i;
+                    break;
+                }
+            }
+            
+            if (found !== hoveredNodeIndex) {
+                hoveredNodeIndex = found;
+                drawCanvas();
+                if (found !== -1) {
+                    const node = chunkNodes[found];
+                    nodeTooltip.innerHTML = `<strong>Page ${node.page} (${node.filename})</strong><br>${escapeHTML(node.text.substring(0, 160))}...`;
+                } else {
+                    nodeTooltip.textContent = 'Hover over a node to inspect its page content.';
+                }
+            }
+        });
+        
+        window.addEventListener('resize', resizeCanvas);
+        
+        async function loadVisualizerCoordinates(sessionId) {
+            if (!sessionId) return;
+            try {
+                const res = await fetch(`/api/sessions/${sessionId}/chunks`);
+                chunkNodes = await res.json();
+                resizeCanvas();
+            } catch(err) {
+                console.error("Failed to load coordinates:", err);
+            }
+        }
+        
+        function highlightRetrievedChunks(sources) {
+            activatedNodeIndices.clear();
+            if (!sources || sources.length === 0) {
+                drawCanvas();
+                return;
+            }
+            sources.forEach(src => {
+                const idx = chunkNodes.findIndex(node => node.text === src.content);
+                if (idx !== -1) {
+                    activatedNodeIndices.add(idx);
+                }
+            });
+            drawCanvas();
+        }
+        
+        async function loadNewsTicker() {
+            try {
+                const res = await fetch('/api/news');
+                const news = await res.json();
+                const container = document.getElementById('newsTickerContent');
+                container.innerHTML = '';
+                const doubledNews = [...news, ...news];
+                doubledNews.forEach(item => {
+                    const el = document.createElement('span');
+                    el.className = 'news-item';
+                    el.innerHTML = `<strong>[${item.topic}]</strong> ${item.headline}`;
+                    container.appendChild(el);
+                });
+            } catch (err) {
+                console.error("Failed to load news:", err);
+            }
+        }
+        loadNewsTicker();
+
+        let isChatEmpty = true;
+        let currentSessionId = null;
+        let activeSessions = [];
+
+        function showPage(pageId) {
+            if (pageId === 'landing') {
+                landingPage.classList.add('active');
+                workspacePage.classList.remove('active');
+                window.location.hash = '';
+            } else if (pageId === 'workspace') {
+                landingPage.classList.remove('active');
+                workspacePage.classList.add('active');
+                window.location.hash = '#/workspace';
+            }
+        }
+
+        if (window.location.hash === '#/workspace') {
+            showPage('workspace');
+        }
+
+        window.addEventListener('hashchange', () => {
+            if (window.location.hash === '#/workspace') {
+                showPage('workspace');
+            } else {
+                showPage('landing');
+            }
+        });
+
+        async function checkHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                if (data.status === 'healthy') {
+                    const statusClass = 'api-status-dot online';
+                    const statusTextStr = data.vectorstore_loaded ? 'API Online • Active' : 'API Online • Idle';
+                    
+                    landingStatusDot.className = statusClass;
+                    landingStatusText.textContent = statusTextStr;
+                    workspaceStatusDot.className = statusClass;
+                    workspaceStatusText.textContent = statusTextStr;
+                } else {
+                    const statusClass = 'api-status-dot';
+                    landingStatusDot.className = statusClass;
+                    landingStatusText.textContent = 'API Degraded';
+                    workspaceStatusDot.className = statusClass;
+                    workspaceStatusText.textContent = 'API Degraded';
+                }
+            } catch (err) {
+                const statusClass = 'api-status-dot';
+                landingStatusDot.className = statusClass;
+                landingStatusText.textContent = 'API Offline';
+                workspaceStatusDot.className = statusClass;
+                workspaceStatusText.textContent = 'API Offline';
+            }
+        }
+
+        checkHealth();
+        setInterval(checkHealth, 8000);
+
+        async function loadSessions(targetSelectSessionId = null) {
+            try {
+                const res = await fetch('/api/sessions');
+                activeSessions = await res.json();
+                if (activeSessions.length === 0) {
+                    await createSession();
+                    return;
+                }
+                renderSessionsList();
+                const savedSessionId = localStorage.getItem('activeSessionId');
+                const selectId = targetSelectSessionId || savedSessionId;
+                if (selectId && activeSessions.some(s => s.session_id === selectId)) {
+                    currentSessionId = selectId;
+                } else if (!currentSessionId || !activeSessions.some(s => s.session_id === currentSessionId)) {
+                    currentSessionId = activeSessions[0].session_id;
+                }
+                selectSession(currentSessionId);
+            } catch (err) {
+                console.error("Failed to load sessions:", err);
+            }
+        }
+
+        function renderSessionsList() {
+            sessionsList.innerHTML = '';
+            activeSessions.forEach(session => {
+                const item = document.createElement('div');
+                item.className = `session-item ${session.session_id === currentSessionId ? 'active' : ''}`;
+                item.addEventListener('click', () => selectSession(session.session_id));
+                
+                const titleText = document.createElement('span');
+                titleText.className = 'session-title-text';
+                titleText.textContent = session.title || "New Chat";
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-item-btn';
+                delBtn.innerHTML = `
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                `;
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSession(session.session_id);
+                });
+                
+                item.appendChild(titleText);
+                item.appendChild(delBtn);
+                sessionsList.appendChild(item);
+            });
+        }
+
+        async function createSession() {
+            try {
+                const res = await fetch('/api/sessions', { method: 'POST' });
+                const data = await res.json();
+                await loadSessions(data.session_id);
+            } catch (err) {
+                console.error("Failed to create session:", err);
+            }
+        }
+
+        async function deleteSession(sessionId) {
+            try {
+                await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+                if (currentSessionId === sessionId) {
+                    currentSessionId = null;
+                    localStorage.removeItem('activeSessionId');
+                }
+                await loadSessions();
+            } catch (err) {
+                console.error("Failed to delete session:", err);
+            }
+        }
+
+        function selectSession(sessionId) {
+            currentSessionId = sessionId;
+            localStorage.setItem('activeSessionId', sessionId);
+            document.querySelectorAll('.session-item').forEach(item => item.classList.remove('active'));
+            renderSessionsList();
+            
+            const session = activeSessions.find(s => s.session_id === sessionId);
+            if (!session) return;
+
+            chatWidthLimit.innerHTML = '';
+            chatWidthLimit.appendChild(suggestedPanel);
+            
+            if (!session.history || session.history.length === 0) {
+                suggestedPanel.style.display = 'flex';
+                isChatEmpty = true;
+            } else {
+                suggestedPanel.style.display = 'none';
+                isChatEmpty = false;
+                session.history.forEach(msg => {
+                    appendMessage(msg.role === 'user' ? 'user' : 'bot', msg.role === 'user' ? 'U' : 'AI', msg.content);
+                });
+            }
+
+            renderSuggestedQuestions(session.suggested_questions);
+            renderDocumentsList(session.filenames, session.filenames_chunks || {});
+            loadVisualizerCoordinates(sessionId);
+        }
+
+        function renderSuggestedQuestions(questions) {
+            const cardsLayout = suggestedPanel.querySelector('.suggested-cards-layout');
+            cardsLayout.innerHTML = '';
+            const list = (questions && questions.length >= 3) ? questions : [
+                "What is the summary of this document?",
+                "What are the key points?",
+                "What are the main findings?"
+            ];
+            list.forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'workspace-suggested-card';
+                card.setAttribute('data-query', q);
+                card.innerHTML = `
+                    <span>${escapeHTML(q)}</span>
+                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                `;
+                card.addEventListener('click', () => performQuery(q));
+                cardsLayout.appendChild(card);
+            });
+        }
+
+        function renderDocumentsList(filenames, filenamesChunks = {}) {
+            documentsList.innerHTML = '';
+            if (!filenames || filenames.length === 0) {
+                documentsList.style.display = 'none';
+                return;
+            }
+            documentsList.style.display = 'flex';
+            filenames.forEach(filename => {
+                const item = document.createElement('div');
+                item.className = 'doc-item';
+                
+                const titleContainer = document.createElement('div');
+                titleContainer.style.display = 'flex';
+                titleContainer.style.flexDirection = 'column';
+                titleContainer.style.flex = '1';
+                titleContainer.style.overflow = 'hidden';
+                titleContainer.style.marginRight = '0.5rem';
+                
+                const titleText = document.createElement('a');
+                titleText.className = 'doc-title-text';
+                titleText.textContent = filename;
+                titleText.href = `/api/sessions/${currentSessionId}/documents/${encodeURIComponent(filename)}`;
+                titleText.target = '_blank';
+                titleText.style.color = 'var(--primary)';
+                titleText.style.textDecoration = 'none';
+                titleText.style.cursor = 'pointer';
+                titleText.addEventListener('mouseenter', () => titleText.style.textDecoration = 'underline');
+                titleText.addEventListener('mouseleave', () => titleText.style.textDecoration = 'none');
+                
+                titleContainer.appendChild(titleText);
+                
+                const chunkVal = filenamesChunks[filename];
+                if (chunkVal) {
+                    const badge = document.createElement('span');
+                    badge.textContent = `${chunkVal} chunks`;
+                    badge.style.fontSize = '0.65rem';
+                    badge.style.color = 'var(--text-muted)';
+                    badge.style.marginTop = '0.15rem';
+                    titleContainer.appendChild(badge);
+                }
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-item-btn';
+                delBtn.innerHTML = `
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                `;
+                delBtn.addEventListener('click', () => deleteDocument(filename));
+                
+                item.appendChild(titleContainer);
+                item.appendChild(delBtn);
+                documentsList.appendChild(item);
+            });
+        }
+
+        async function deleteDocument(filename) {
+            if (!currentSessionId) return;
+            try {
+                await fetch(`/api/sessions/${currentSessionId}/documents?filename=${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                await loadSessions(currentSessionId);
+            } catch (err) {
+                console.error("Failed to delete document:", err);
+            }
+        }
+
+        newChatBtn.addEventListener('click', createSession);
+        loadSessions();
+
+        exportChatBtn.addEventListener('click', () => {
+            if (!currentSessionId) return;
+            const session = activeSessions.find(s => s.session_id === currentSessionId);
+            if (!session || !session.history || session.history.length === 0) {
+                alert("No chat history to export!");
+                return;
+            }
+            let mdContent = `# Research Chat Export - Session: ${session.title || 'New Chat'}\n\n`;
+            session.history.forEach(msg => {
+                const role = msg.role === 'user' ? '### User' : '### Assistant';
+                mdContent += `${role}\n\n${msg.content}\n\n---\n\n`;
+            });
+            const blob = new Blob([mdContent], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat_export_${currentSessionId.substring(0, 8)}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        chatFeed.addEventListener('scroll', () => {
+            const threshold = 80;
+            const distanceFromBottom = chatFeed.scrollHeight - chatFeed.scrollTop - chatFeed.clientHeight;
+            isUserScrolledUp = (distanceFromBottom > threshold);
+        });
+
+        menuToggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.add('collapsed');
+        });
+
+        kRange.addEventListener('input', (e) => {
+            kVal.textContent = e.target.value;
+        });
+
+        thresholdRange.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value) / 100;
+            thresholdVal.textContent = val === 0 ? 'Auto' : val.toFixed(2);
+        });
+
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        async function handleFileUpload(file) {
+            if (!file.name.endsWith('.pdf')) {
+                showUploadStatus('Error: Only PDF supported.', true);
+                return;
+            }
+            if (file.size > 50 * 1024 * 1024) {
+                showUploadStatus('Error: File size exceeds 50MB limit.', true);
+                return;
+            }
+            if (!currentSessionId) {
+                showUploadStatus('Error: Select or create a chat session first.', true);
+                return;
+            }
+            showUploadStatus('Analyzing & indexing PDF...', false);
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`/ingest?session_id=${currentSessionId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showUploadStatus(`Success! Ingested ${data.chunks_count} chunks.`, false);
+                    await loadSessions(currentSessionId);
+                    checkHealth();
+                } else {
+                    showUploadStatus(`Failed: ${data.detail || 'Error'}`, true);
+                }
+            } catch (err) {
+                showUploadStatus(`Network upload error.`, true);
+            } finally {
+                fileInput.value = '';
+            }
+        }
+
+        function showUploadStatus(msg, isError) {
+            uploadStatus.style.display = 'block';
+            uploadStatus.style.borderColor = isError ? 'var(--accent-error)' : 'var(--border-color)';
+            uploadStatus.style.color = isError ? 'var(--accent-error)' : 'var(--primary)';
+            uploadStatus.textContent = msg;
+        }
+
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performQuery();
+            }
+        });
+
+        sendBtn.addEventListener('click', () => performQuery());
+
+        clearChatBtn.addEventListener('click', async () => {
+            if (!currentSessionId) return;
+            try {
+                const response = await fetch(`/api/sessions/${currentSessionId}/history`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Unable to clear history');
+                const session = activeSessions.find(s => s.session_id === currentSessionId);
+                if (session) {
+                    session.history = [];
+                    chatWidthLimit.innerHTML = '';
+                    chatWidthLimit.appendChild(suggestedPanel);
+                    suggestedPanel.style.display = 'flex';
+                    isChatEmpty = true;
+                }
+            } catch(e) { console.error('Failed to clear chat history:', e); }
+        });
+
+        async function performQuery(customQuery = null) {
+            const query = (customQuery || queryInput.value).trim();
+            if (!query) return;
+            if (!currentSessionId) return;
+
+            if (isChatEmpty) {
+                suggestedPanel.style.display = 'none';
+                isChatEmpty = false;
+            }
+
+            queryInput.value = '';
+            appendMessage('user', 'U', query);
+
+            const botRow = appendMessage('bot', 'AI', '');
+            const bubble = botRow.querySelector('.bubble');
+            
+            const typing = document.createElement('div');
+            typing.className = 'typing-bubble-animation';
+            typing.innerHTML = '<span></span><span></span><span></span>';
+            bubble.appendChild(typing);
+            
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+
+            const topK = parseInt(kRange.value);
+            const thresholdRaw = parseFloat(thresholdRange.value) / 100;
+            const threshold = thresholdRaw === 0 ? null : thresholdRaw;
+            const stream = false;
+
+            queryInput.disabled = true;
+            sendBtn.disabled = true;
+
+            try {
+                const res = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId, question: query, top_k: topK, threshold: threshold, stream: stream })
+                });
+
+                if (typing && typing.parentNode === bubble) {
+                    bubble.removeChild(typing);
+                }
+
+                if (!res.ok) {
+                    let errMsg = 'Failed to get answer.';
+                    try {
+                        const errData = await res.json();
+                        errMsg = errData.detail || errMsg;
+                    } catch (e) {}
+                    bubble.textContent = `Error: ${errMsg}`;
+                    return;
+                }
+
+                if (stream) {
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let done = false;
+                    let fullText = '';
+                    while (!done) {
+                        const { value, done: doneReading } = await reader.read();
+                        done = doneReading;
+                        const chunkValue = decoder.decode(value);
+                        fullText += chunkValue;
+                        
+                        let parts = fullText.split('__SOURCES__:');
+                        let displayText = parts[0];
+                        bubble.innerHTML = renderMarkdown(displayText);
+                        
+                        if (parts.length > 1) {
+                            try {
+                                let sources = JSON.parse(parts[1]);
+                                renderSources(bubble, sources);
+                            } catch(e) {}
+                        }
+                        if (!isUserScrolledUp) {
+                            chatFeed.scrollTop = chatFeed.scrollHeight;
+                        }
+                    }
+                } else {
+                    const data = await res.json();
+                    bubble.innerHTML = renderMarkdown(data.response);
+                    if (data.sources && data.sources.length > 0) {
+                        renderSources(bubble, data.sources);
+                        highlightRetrievedChunks(data.sources);
+                    }
+                }
+                
+                const sessRes = await fetch('/api/sessions');
+                activeSessions = await sessRes.json();
+            } catch (err) {
+                bubble.textContent = `Error: Failed to communicate with server.`;
+            } finally {
+                if (typing && typing.parentNode === bubble) {
+                    bubble.removeChild(typing);
+                }
+                queryInput.disabled = false;
+                sendBtn.disabled = false;
+                queryInput.focus();
+            }
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+        }
+
+        function renderSources(container, sources) {
+            if (container.querySelector('.sources-wrapper')) return;
+            const sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'sources-wrapper';
+            
+            const btn = document.createElement('button');
+            btn.className = 'sources-toggle-btn';
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                <span>Retrieved Context (${sources.length})</span>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'sources-content-items';
+            
+            sources.forEach(src => {
+                const card = document.createElement('div');
+                card.className = 'workspace-source-card';
+                const rawSource = src.metadata.source ? src.metadata.source.split('/').pop() : 'Unknown';
+                const escapedSource = escapeHTML(rawSource);
+                const sourcePage = src.metadata.page !== undefined ? ` (Page ${src.metadata.page + 1})` : '';
+                
+                let imagesHTML = '';
+                if (src.metadata.images && src.metadata.images.length > 0) {
+                    imagesHTML = '<div class="source-images-gallery" style="display: flex; gap: 0.5rem; margin-top: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem;">';
+                    src.metadata.images.forEach(imgUrl => {
+                        imagesHTML += `<img src="${imgUrl}" style="max-height: 100px; border-radius: 4px; border: 1px solid var(--border-color); cursor: pointer;" onclick="window.open('${imgUrl}', '_blank')" alt="Visual Context Chart/Image">`;
+                    });
+                    imagesHTML += '</div>';
+                }
+                
+                card.innerHTML = `
+                    <div class="source-meta-label">${escapedSource}${sourcePage}</div>
+                    <div class="source-content-body">${escapeHTML(src.content)}</div>
+                    ${imagesHTML}
+                `;
+                content.appendChild(card);
+            });
+            
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('open');
+                content.classList.toggle('open');
+                chatFeed.scrollTop = chatFeed.scrollHeight;
+            });
+            
+            sourcesDiv.appendChild(btn);
+            sourcesDiv.appendChild(content);
+            container.appendChild(sourcesDiv);
+        }
+
+        function appendMessage(sender, avatarChar, text) {
+            const row = document.createElement('div');
+            row.className = `message-row ${sender}`;
+            const contentHTML = (sender === 'bot') ? renderMarkdown(text) : escapeHTML(text);
+            row.innerHTML = `
+                <div class="avatar">${avatarChar}</div>
+                <div class="bubble-container">
+                    <div class="bubble">${contentHTML}</div>
+                </div>
+            `;
+            chatWidthLimit.appendChild(row);
+            if (!isUserScrolledUp || sender === 'user') {
+                chatFeed.scrollTop = chatFeed.scrollHeight;
+            }
+            return row;
+        }
+
+        function escapeHTML(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderMarkdown(markdown) {
+            if (window.marked && typeof marked.parse === 'function') {
+                try {
+                    return marked.parse(String(markdown), {
+                        renderer: { html() { return ''; } }
+                    });
+                } catch (e) {
+                    console.error("Markdown parse failed:", e);
+                }
+            }
+            let txt = escapeHTML(markdown);
+            txt = txt.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            txt = txt.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            txt = txt.replace(/`([^`]+)`/g, '<code>$1</code>');
+            txt = txt.replace(/\n/g, '<br>');
+            return txt;
+        }
+    </script>
+</body>
+</html>
