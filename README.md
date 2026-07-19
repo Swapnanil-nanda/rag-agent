@@ -1,15 +1,21 @@
 # Local PDF RAG Agent
 
-A small, production-oriented Retrieval-Augmented Generation (RAG) service. Upload PDFs, index their chunks in a local FAISS database, and ask questions through the accessible browser UI or REST API. Answers are instructed to use retrieved context only.
+A production-oriented Retrieval-Augmented Generation (RAG) service. Upload PDFs, index their chunks in a local vector database, and ask questions through the browser UI or REST API. Answers are instructed to use retrieved context only.
 
 ## Architecture
 
 ```text
-PDF -> PyPDFLoader -> RecursiveCharacterTextSplitter -> local MiniLM embeddings
-    -> persisted FAISS index -> similarity retriever -> grounded prompt -> OpenRouter chat model
+PDF -> PyMuPDF + RapidOCR -> RecursiveCharacterTextSplitter -> Vector Embeddings
+    -> FAISS Index -> BM25 + Vector Hybrid Retriever -> Grounded Prompt -> OpenRouter LLM
 ```
 
-`app/` keeps the responsibilities separate: `api/routes.py` owns HTTP behaviour, `rag/loader.py` reads PDFs, `splitter.py` chunks them, `embeddings.py` creates the local embedding client, `vectorstore.py` persists FAISS, `retriever.py` retrieves chunks, and `chain.py` creates grounded or streamed answers. `app/static/index.html` is the no-build chat interface.
+`app/` keeps the responsibilities separate: `api/routes.py` owns HTTP behaviour, `rag/loader.py` reads PDFs, `splitter.py` chunks them, `embeddings.py` creates the embedding client, `vectorstore.py` persists FAISS, `retriever.py` retrieves chunks, and `chain.py` creates grounded or streamed answers. `app/static/index.html` is the glassmorphism chat interface.
+
+## Key Recommendations
+
+1. **Multi-Column & Table OCR Parsing**: Upgrade the document processing pipeline to support multi-column layout detection and complex table extraction for scientific papers.
+2. **Persistent Cloud Vector Store**: Migrate local FAISS files to managed cloud vector databases (e.g. Qdrant, Pinecone) for multi-tenant scalability and low-latency index updates.
+3. **Automated RAG Evaluation**: Integrate evaluation frameworks (such as RAGAS) to dynamically track precision, recall, and context faithfulness metrics.
 
 ## Install and run
 
@@ -71,7 +77,3 @@ docker compose up --build
 ```
 
 Tests use fake embeddings and mock the model, so they do not make external network calls. The Docker configuration persists `documents/` and `vectorstore/` as mounted local directories.
-
-## Scaling notes
-
-`rag/retriever.py` is the seam for hybrid retrieval (BM25/reranking) and `rag/vectorstore.py` is the seam for a managed vector store. For Qdrant or Pinecone, replace the FAISS load/add/delete functions with the provider client while keeping the loader, splitter, retriever contract, API schemas, and grounded prompt unchanged. For multi-instance production, move uploaded files and session metadata to durable shared storage, use a database for sessions, and enforce authentication plus rate limits at the gateway.

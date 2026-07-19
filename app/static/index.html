@@ -1474,6 +1474,7 @@
                     <button class="doc-tab active" data-tab="architecture">How It Works</button>
                     <button class="doc-tab" data-tab="workflows">Workflows</button>
                     <button class="doc-tab" data-tab="code">Core Code</button>
+                    <button class="doc-tab" data-tab="recommendations">Recommendations</button>
                     <button class="doc-tab" data-tab="github">GitHub Repository</button>
                 </div>
                 <div class="doc-tab-content active" id="tab-architecture">
@@ -1508,6 +1509,14 @@ for rank, (doc, b_score) in enumerate(bm25_results):
     doc_id = id(doc)
     rrf_scores[doc_id] += 1.0 / (60 + rank)
                     </pre>
+                </div>
+                <div class="doc-tab-content" id="tab-recommendations">
+                    <h4>Key Production Recommendations</h4>
+                    <ol style="padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.78rem;">
+                        <li><strong>Multi-Column & Table OCR Parsing</strong>: Upgrade document processing pipeline to support multi-column layout detection and complex table extraction for scientific papers.</li>
+                        <li><strong>Persistent Cloud Vector Store</strong>: Migrate local FAISS files to managed cloud vector databases (e.g. Qdrant, Pinecone) for multi-tenant scalability and low-latency index updates.</li>
+                        <li><strong>Automated RAG Evaluation</strong>: Integrate evaluation frameworks (such as RAGAS) to dynamically track precision, recall, and context faithfulness metrics.</li>
+                    </ol>
                 </div>
                 <div class="doc-tab-content" id="tab-github">
                     <h4>Official GitHub Repository</h4>
