@@ -2170,7 +2170,8 @@ for rank, (doc, b_score) in enumerate(bm25_results):
         async function performQuery(customQuery = null) {
             const query = (customQuery || queryInput.value).trim();
             if (!query) return;
-            if (!currentSessionId) return;
+            const activeSid = currentSessionId || (await createSession());
+            if (!activeSid) return;
 
             if (isChatEmpty) {
                 suggestedPanel.style.display = 'none';
@@ -2202,7 +2203,7 @@ for rank, (doc, b_score) in enumerate(bm25_results):
                 const res = await fetch('/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: currentSessionId, question: query, top_k: topK, threshold: threshold, stream: stream })
+                    body: JSON.stringify({ session_id: activeSid, question: query, top_k: topK, threshold: threshold, stream: stream })
                 });
 
                 if (typing && typing.parentNode === bubble) {
