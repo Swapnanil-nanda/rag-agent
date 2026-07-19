@@ -229,6 +229,10 @@ async def ingest(session_id: str, file: UploadFile = File(...)):
 @router.post("/query", tags=["RAG"])
 async def query(request: QueryRequest):
     try:
+        from app.rag.telemetry import TelemetryTracer
+        from app.rag.agents import FollowUpAgent
+        tracer = TelemetryTracer()
+        
         metadata = load_metadata(request.session_id)
         history_list = []
         for msg in metadata.get("history", []):
@@ -238,6 +242,11 @@ async def query(request: QueryRequest):
         docs = await asyncio.to_thread(
             retrieve_documents, request.session_id, request.question, request.top_k, request.threshold
         )
+        
+        followup_agent = FollowUpAgent()
+        followups = followup_agent.generate_followups(request.question, "")
+        metadata["suggested_questions"] = followups
+        
         if request.stream:
             async def event_generator():
                 full_response = ""
@@ -252,8 +261,10 @@ async def query(request: QueryRequest):
                     {"content": doc.page_content, "metadata": doc.metadata}
                     for doc in docs
                 ]
+                tracer.log_query_span(request.question, len(full_response), len(docs))
                 yield f"\n\n__SOURCES__:{json.dumps(sources_list)}"
             return StreamingResponse(event_generator(), media_type="text/plain")
+            
         response_text = await generate_response(request.question, docs, history_list)
         history = metadata.setdefault("history", [])
         history.extend(({"role": "user", "content": request.question}, {"role": "assistant", "content": response_text}))
@@ -263,6 +274,7 @@ async def query(request: QueryRequest):
             DocumentSource(content=doc.page_content, metadata=doc.metadata)
             for doc in docs
         ]
+        tracer.log_query_span(request.question, len(response_text), len(docs))
         return QueryResponse(
             query=request.question,
             response=response_text,

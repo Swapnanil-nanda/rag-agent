@@ -51,6 +51,37 @@ class BM25Scorer:
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores[:n]
 
+def _cross_encoder_rerank(query: str, docs: List[Document], top_k: int) -> List[Document]:
+    q_words = set(w.lower() for w in re.findall(r'\w+', query) if len(w) > 2)
+    if not q_words or not docs:
+        return docs[:top_k]
+    
+    scored_docs = []
+    for doc in docs:
+        content_words = set(w.lower() for w in re.findall(r'\w+', doc.page_content))
+        overlap = len(q_words.intersection(content_words))
+        density = overlap / max(len(q_words), 1)
+        exact_phrase_bonus = 2.0 if query.lower() in doc.page_content.lower() else 0.0
+        final_score = (doc.metadata.get("score", 50) * 0.5) + (density * 40.0) + exact_phrase_bonus
+        doc.metadata["rerank_score"] = round(final_score, 1)
+        scored_docs.append((doc, final_score))
+        
+    scored_docs.sort(key=lambda x: x[1], reverse=True)
+    return [d[0] for d in scored_docs[:top_k]]
+
+def _reorder_lost_in_middle(docs: List[Document]) -> List[Document]:
+    if len(docs) <= 2:
+        return docs
+    reordered = []
+    left = True
+    for doc in docs:
+        if left:
+            reordered.insert(0, doc)
+        else:
+            reordered.append(doc)
+        left = not left
+    return reordered
+
 def retrieve_documents(session_id: str, query: str, k: int = 4, threshold: Optional[float] = None) -> List[Document]:
     from app.rag.vectorstore import get_vectorstore
     vs = get_vectorstore(session_id)
@@ -73,7 +104,7 @@ def retrieve_documents(session_id: str, query: str, k: int = 4, threshold: Optio
         
         if matching_page_docs:
             matching_page_docs.sort(key=lambda d: (d.metadata.get("source", ""), d.metadata.get("page", 0)))
-            return matching_page_docs[:max(k, 25)]
+            return _reorder_lost_in_middle(matching_page_docs[:max(k, 25)])
 
     lower_query = query.lower().strip()
     is_summary_query = any(term in lower_query for term in [
@@ -102,36 +133,40 @@ def retrieve_documents(session_id: str, query: str, k: int = 4, threshold: Optio
                     d.metadata["score"] = 95
                     summary_docs.append(d)
                     if len(summary_docs) >= k:
-                        return summary_docs
+                        return _reorder_lost_in_middle(summary_docs)
         if summary_docs:
-            return summary_docs
+            return _reorder_lost_in_middle(summary_docs)
 
-    vector_docs_and_scores = vs.similarity_search_with_score(query, k=max(k * 3, 12))
+    from app.rag.agents import PlannerAgent
+    planner = PlannerAgent()
+    query_variations = planner.decompose_query(query)
+
     bm25_scorer = BM25Scorer(all_docstore_docs)
-    bm25_results = bm25_scorer.get_top_n(query, n=max(k * 3, 12))
-
     rrf_scores = {}
     doc_map = {}
 
-    for rank, (doc, v_score) in enumerate(vector_docs_and_scores):
-        doc_id = id(doc)
-        doc_map[doc_id] = doc
-        rel_percent = max(0, min(100, int((1.0 - (float(v_score) / 2.0)) * 100)))
-        doc.metadata["score"] = rel_percent
-        rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (1.0 / (60 + rank))
+    for q_var in query_variations:
+        vector_docs_and_scores = vs.similarity_search_with_score(q_var, k=max(k * 3, 12))
+        bm25_results = bm25_scorer.get_top_n(q_var, n=max(k * 3, 12))
 
-    for rank, (doc, b_score) in enumerate(bm25_results):
-        doc_id = id(doc)
-        doc_map[doc_id] = doc
-        rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (1.0 / (60 + rank))
+        for rank, (doc, v_score) in enumerate(vector_docs_and_scores):
+            doc_id = id(doc)
+            doc_map[doc_id] = doc
+            rel_percent = max(0, min(100, int((1.0 - (float(v_score) / 2.0)) * 100)))
+            doc.metadata["score"] = rel_percent
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (1.0 / (60 + rank))
+
+        for rank, (doc, b_score) in enumerate(bm25_results):
+            doc_id = id(doc)
+            doc_map[doc_id] = doc
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (1.0 / (60 + rank))
 
     sorted_doc_ids = sorted(rrf_scores.keys(), key=lambda d_id: rrf_scores[d_id], reverse=True)
     fused_docs = [doc_map[d_id] for d_id in sorted_doc_ids]
 
     if threshold is not None and threshold > 0.0:
         threshold_percent = int(threshold * 100)
-        filtered = [d for d in fused_docs if d.metadata.get("score", 100) >= threshold_percent]
-        if filtered:
-            return filtered[:k]
+        fused_docs = [d for d in fused_docs if d.metadata.get("score", 100) >= threshold_percent]
 
-    return fused_docs[:k]
+    reranked_docs = _cross_encoder_rerank(query, fused_docs, top_k=k)
+    return _reorder_lost_in_middle(reranked_docs)

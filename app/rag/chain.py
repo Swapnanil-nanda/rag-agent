@@ -10,20 +10,20 @@ from langchain_openai import ChatOpenAI
 
 from app.config import settings
 from app.rag.schemas import ChatMessage
+from app.rag.agents import CitationAgent, VerificationAgent
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are a highly intelligent AI assistant with access to uploaded document context. You behave like a normal, knowledgeable AI — you can answer any question, have conversations, be creative, and use your general knowledge freely.
+STRICT_GROUNDED_SYSTEM_PROMPT = """You are an Enterprise Knowledge Intelligence Assistant.
+Your primary duty is to provide strictly grounded answers based ONLY on the retrieved document context below.
 
-When document context is provided below, use it to enhance your answers. You can:
-- Summarize, analyze, compare, and explain document content
-- Generate new ideas, suggestions, or creative content inspired by the documents
-- Combine your general knowledge with document facts to give richer answers
-- Answer follow-up questions naturally using both the documents and conversation history
+Rules for your responses:
+1. Synthesize accurate, natural answers using facts contained directly in the provided context.
+2. When referencing facts, cite the source using inline brackets like [Source 1: Filename | Page X].
+3. If the retrieved document context does NOT contain enough information to answer the question, explicitly state: "The uploaded documents do not contain sufficient evidence to answer this question."
+4. Do NOT speculate, extrapolate, or fabricate information outside the provided document context.
 
-When referencing specific facts from the documents, mention that they come from the uploaded files. When using your own general knowledge, you may do so freely — just be helpful and accurate.
-
-Retrieved document context (use as reference material, not as a restriction):
+Retrieved Document Context:
 {context}"""
 
 CHITCHAT_SYSTEM_PROMPT = """You are a friendly, warm, and highly conversational AI assistant.
@@ -37,7 +37,7 @@ def get_llm() -> ChatOpenAI | None:
             api_key=settings.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",
             model=settings.openrouter_model,
-            temperature=0.7,
+            temperature=0.3,
             max_retries=1,
         )
     if not settings.openai_api_key or settings.openai_api_key.startswith("mock"):
@@ -45,7 +45,7 @@ def get_llm() -> ChatOpenAI | None:
     return ChatOpenAI(
         api_key=settings.openai_api_key,
         model=settings.llm_model,
-        temperature=0.7,
+        temperature=0.3,
         max_retries=1,
     )
 
@@ -54,7 +54,7 @@ def build_chain():
     if llm is None:
         return None
     prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT),
+        ("system", STRICT_GROUNDED_SYSTEM_PROMPT),
         MessagesPlaceholder(variable_name="history"),
         ("human", "{question}"),
     ])
@@ -72,13 +72,15 @@ def build_chitchat_chain():
     return prompt | llm | StrOutputParser()
 
 def _context(documents: Sequence[Document]) -> str:
-    formatted_chunks = []
-    for index, doc in enumerate(documents, start=1):
-        src_file = str(doc.metadata.get("source", "File")).replace("\\", "/").split("/")[-1]
-        page_num = doc.metadata.get("page")
-        page_str = f" | Page {page_num + 1}" if page_num is not None else ""
-        formatted_chunks.append(f"[Source {index}: {src_file}{page_str}]\n{doc.page_content}")
-    return "\n\n".join(formatted_chunks)
+    citation_agent = CitationAgent()
+    docs_to_use = []
+    for doc in documents:
+        if "parent_context" in doc.metadata:
+            parent_doc = Document(page_content=doc.metadata["parent_context"], metadata=doc.metadata)
+            docs_to_use.append(parent_doc)
+        else:
+            docs_to_use.append(doc)
+    return citation_agent.format_citations(docs_to_use)
 
 def _history(messages: Sequence[ChatMessage] | None) -> list[HumanMessage | AIMessage]:
     return [
@@ -119,7 +121,7 @@ def _fallback_chitchat(question: str) -> str:
 
 def _fallback_answer(question: str, documents: Sequence[Document]) -> str:
     if not documents:
-        return "I couldn't find explicit details about that in the provided documents."
+        return "The uploaded documents do not contain sufficient evidence to answer this question."
     terms = set(re.findall(r"[a-zA-Z0-9]{3,}", question.lower()))
     candidates: list[str] = []
     for document in documents:
@@ -128,7 +130,7 @@ def _fallback_answer(question: str, documents: Sequence[Document]) -> str:
                 candidates.append(sentence.strip())
     if candidates:
         return "\n\n".join(f"- {sentence}" for sentence in candidates[:4])
-    return "I couldn't find explicit details about that in the provided documents."
+    return "The uploaded documents do not contain sufficient evidence to answer this question."
 
 async def generate_response(
     question: str, context_docs: Sequence[Document], history: Sequence[ChatMessage] | None = None
@@ -149,9 +151,14 @@ async def generate_response(
     if chain is None:
         return _fallback_answer(question, context_docs)
     try:
-        return await chain.ainvoke({
+        raw_ans = await chain.ainvoke({
             "context": _context(context_docs), "history": _history(history), "question": question
         })
+        verifier = VerificationAgent()
+        verification = verifier.verify_groundedness(raw_ans, context_docs)
+        if verification["hallucination_risk"] == "HIGH":
+            logger.warning(f"Answer failed verification (confidence {verification['confidence_score']}%)")
+        return raw_ans
     except Exception:
         logger.exception("Answer generation failed; returning extractive fallback")
         return _fallback_answer(question, context_docs)

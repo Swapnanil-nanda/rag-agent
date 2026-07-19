@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Sequence
 from langchain_core.documents import Document
 
@@ -46,17 +47,33 @@ def calculate_context_precision(question: str, context_docs: Sequence[Document])
             
     return round((relevant_chunks / len(context_docs)) * 100, 1)
 
-def evaluate_rag_response(question: str, answer: str, context_docs: Sequence[Document]) -> dict:
+def calculate_context_recall(question: str, context_docs: Sequence[Document]) -> float:
+    if not context_docs:
+        return 0.0
+    q_words = set(w.lower() for w in re.findall(r'\w+', question) if len(w) > 2)
+    if not q_words:
+        return 100.0
+    context_words = set(w.lower() for d in context_docs for w in re.findall(r'\w+', d.page_content))
+    recalled = q_words.intersection(context_words)
+    return round((len(recalled) / len(q_words)) * 100, 1)
+
+def evaluate_rag_response(question: str, answer: str, context_docs: Sequence[Document], latency_ms: float = 0.0) -> dict:
     faithfulness = calculate_faithfulness(answer, context_docs)
     relevance = calculate_answer_relevance(question, answer)
     context_precision = calculate_context_precision(question, context_docs)
-    ragas_score = round((faithfulness * 0.4) + (relevance * 0.35) + (context_precision * 0.25), 1)
+    context_recall = calculate_context_recall(question, context_docs)
+    hallucination_rate = round(100.0 - faithfulness, 1)
+    
+    ragas_score = round((faithfulness * 0.35) + (relevance * 0.30) + (context_precision * 0.20) + (context_recall * 0.15), 1)
     
     return {
         "ragas_score": ragas_score,
         "faithfulness": faithfulness,
         "answer_relevance": relevance,
         "context_precision": context_precision,
+        "context_recall": context_recall,
+        "hallucination_rate": hallucination_rate,
+        "latency_ms": round(latency_ms, 2),
         "retrieved_chunks_count": len(context_docs),
         "status": "PASS" if ragas_score >= 60.0 else "NEEDS_REVIEW"
     }
