@@ -18,7 +18,7 @@ def _default_documents_path() -> Path:
 class Settings(BaseSettings):
     openai_api_key: str | None = Field(default=None, repr=False)
     openrouter_api_key: str | None = Field(default=None, repr=False)
-    openrouter_model: str = "nvidia/llama-3.1-nemotron-ultra-253b-v1:free"
+    openrouter_model: str = "google/gemini-2.0-flash-exp:free"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     llm_model: str = "gpt-4o-mini"
     vectorstore_path: Path = Field(default_factory=_default_vectorstore_path)
