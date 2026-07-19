@@ -274,6 +274,40 @@
             line-height: 1.5;
             color: var(--text-muted);
         }
+        .research-card {
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.015);
+            backdrop-filter: blur(12px);
+            padding: 1.15rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        .research-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--cyan-grad);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .research-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(69, 209, 232, 0.3);
+            background: rgba(255, 255, 255, 0.035);
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px rgba(69, 209, 232, 0.15);
+        }
+        .research-card:hover::before {
+            opacity: 1;
+        }
         .landing-footer {
             margin-top: auto;
             border-top: 1px solid var(--border-color);
@@ -1190,33 +1224,63 @@
             </div>
         </section>
 
-        <section class="preview-card" style="max-width: 900px; margin: 0 auto 3rem auto; padding: 1.5rem;">
-            <div class="preview-card-header" style="margin-bottom: 1rem;">
-                <div class="preview-card-title" style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">Featured Research Questions</div>
+        <section class="preview-card" style="max-width: 960px; margin: 0 auto 3.5rem auto; padding: 1.75rem; background: rgba(13, 16, 27, 0.6); backdrop-filter: blur(20px); border-radius: 16px;">
+            <div class="preview-card-header" style="margin-bottom: 1.25rem;">
+                <div class="preview-card-title" style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Real-World Domain Benchmarks
+                </div>
                 <div class="grounded-badge">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                         <circle cx="12" cy="12" r="10" fill="#10B981"/>
                     </svg>
-                    <span>Instant Workspace Query</span>
+                    <span>Hybrid RRF &bull; Multi-Doc Verified</span>
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
-                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
-                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Unit 1 &bull; ML Definitions</div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">Summarize Machine Learning definitions and Arthur Samuel's 1959 core concepts</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1rem;">
+                <div class="research-card" onclick="showPage('workspace');">
+                    <div>
+                        <div style="font-size: 0.68rem; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Machine Learning Research</div>
+                        <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-main); line-height: 1.45;">"What are the core Bayes Theorem equations and MAP hypothesis derivations in Unit II (pages 36–54)?"</div>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>Handwritten PDF &bull; RapidOCR</span>
+                        <span style="color: var(--accent); font-weight: 600;">Run Query &rarr;</span>
+                    </div>
                 </div>
-                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
-                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Unit 2 &bull; Pages 36-54</div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">Explain Bayes Theorem, MAP Estimation, and Naïve Bayes from pages 36 to 54</div>
+                
+                <div class="research-card" onclick="showPage('workspace');">
+                    <div>
+                        <div style="font-size: 0.68rem; color: #8B5CF6; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Financial & SEC 10-K Audits</div>
+                        <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-main); line-height: 1.45;">"Extract liquidity risk factors, Q4 EBITDA margins, and capital allocation covenants across fiscal years."</div>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>Annual Reports &bull; Table Extraction</span>
+                        <span style="color: var(--accent); font-weight: 600;">Run Query &rarr;</span>
+                    </div>
                 </div>
-                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
-                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Decision Theory</div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">What are the core equations for Decision Tree Entropy and Information Gain?</div>
+                
+                <div class="research-card" onclick="showPage('workspace');">
+                    <div>
+                        <div style="font-size: 0.68rem; color: #EC4899; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Biomedical & Clinical Trials</div>
+                        <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-main); line-height: 1.45;">"Analyze Phase III drug efficacy metrics, adverse event statistical significance, and dosage protocol safety."</div>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>Medical Papers &bull; Exact Citations</span>
+                        <span style="color: var(--accent); font-weight: 600;">Run Query &rarr;</span>
+                    </div>
                 </div>
-                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
-                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Learning Paradigms</div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">Compare Supervised, Unsupervised, and Reinforcement Learning paradigms</div>
+                
+                <div class="research-card" onclick="showPage('workspace');">
+                    <div>
+                        <div style="font-size: 0.68rem; color: #10B981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Legal & Regulatory Compliance</div>
+                        <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-main); line-height: 1.45;">"Cross-examine indemnification liability caps, IP assignment clauses, and termination notice windows."</div>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>Legal Contracts &bull; Page-Level Proof</span>
+                        <span style="color: var(--accent); font-weight: 600;">Run Query &rarr;</span>
+                    </div>
                 </div>
             </div>
         </section>
