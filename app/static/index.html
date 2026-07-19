@@ -1877,10 +1877,16 @@ for rank, (doc, b_score) in enumerate(bm25_results):
             try {
                 const res = await fetch('/api/sessions', { method: 'POST' });
                 const data = await res.json();
-                await loadSessions(data.session_id);
+                if (data && data.session_id) {
+                    currentSessionId = data.session_id;
+                    localStorage.setItem('activeSessionId', currentSessionId);
+                    await loadSessions(data.session_id);
+                    return data.session_id;
+                }
             } catch (err) {
                 console.error("Failed to create session:", err);
             }
+            return null;
         }
 
         async function deleteSession(sessionId) {
@@ -2102,18 +2108,16 @@ for rank, (doc, b_score) in enumerate(bm25_results):
                 showUploadStatus('Error: File size exceeds 50MB limit.', true);
                 return;
             }
-            if (!currentSessionId) {
-                await createSession();
-                if (!currentSessionId) {
-                    showUploadStatus('Error: Could not initialize chat session.', true);
-                    return;
-                }
+            const activeSid = currentSessionId || (await createSession());
+            if (!activeSid) {
+                showUploadStatus('Error: Could not initialize chat session. Check local server connection.', true);
+                return;
             }
             showUploadStatus(`Analyzing & indexing ${file.name}...`, false);
             const formData = new FormData();
             formData.append('file', file);
             try {
-                const res = await fetch(`/ingest?session_id=${currentSessionId}`, {
+                const res = await fetch(`/ingest?session_id=${activeSid}`, {
                     method: 'POST',
                     body: formData
                 });
