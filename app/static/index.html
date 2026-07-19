@@ -42,15 +42,15 @@
         .page-container {
             display: none;
             flex-direction: column;
-            min-height: calc(100vh - 32px);
+            min-height: 100vh;
             width: 100%;
         }
         .page-container.active {
             display: flex;
         }
         #workspacePage {
-            height: calc(100vh - 32px);
-            min-height: calc(100vh - 32px);
+            height: 100vh;
+            min-height: 100vh;
             overflow: hidden;
         }
         header {
@@ -287,7 +287,7 @@
         .workspace-layout {
             display: flex;
             flex: 1;
-            height: calc(100vh - 97px);
+            height: calc(100vh - 65px);
             overflow: hidden;
         }
         .sidebar {
@@ -1165,13 +1165,6 @@
     </style>
 </head>
 <body>
-    <div class="news-ticker-bar">
-        <span class="news-ticker-label">Live RAG Network</span>
-        <div class="news-ticker-content" id="newsTickerContent">
-            <span><strong>[AI ENGINE]</strong> Loading workspace news items from API...</span>
-        </div>
-    </div>
-
     <div class="page-container active" id="landingPage">
         <header>
             <div class="logo-section" onclick="showPage('landing')">
@@ -1188,39 +1181,49 @@
         </header>
 
         <section class="landing-hero">
-            <div class="hero-tag">Grounded research, one question away</div>
+            <div class="hero-tag">Grounded research &bull; Deep OCR Engine</div>
             <h2>Ask better questions. Find<br>answers you can verify.</h2>
-            <p>Bring your PDFs into one focused research workspace. Ask naturally, trace every claim back to its source, and keep the model grounded in the documents you trust.</p>
+            <p>Upload handwritten notes, lecture slides, or complex textbooks. Query any page range, extract verified citations, and keep your AI grounded in sources you trust.</p>
             <div class="hero-buttons">
-                <button class="btn btn-cyan" onclick="showPage('workspace')">Open research workspace</button>
-                <button class="btn btn-outline" onclick="showPage('workspace')">See how it works</button>
-            </div>
-            <div class="tech-logos">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                <button class="btn btn-cyan" onclick="showPage('workspace')">Open Research Workspace</button>
+                <button class="btn btn-outline" id="openHowItWorksBtn" onclick="document.getElementById('howItWorksModal').classList.add('open')">See How It Works</button>
             </div>
         </section>
 
-        <section class="preview-card">
-            <div class="preview-card-header">
-                <div class="preview-card-title">Research question</div>
+        <section class="preview-card" style="max-width: 900px; margin: 0 auto 3rem auto; padding: 1.5rem;">
+            <div class="preview-card-header" style="margin-bottom: 1rem;">
+                <div class="preview-card-title" style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">Featured Research Questions</div>
                 <div class="grounded-badge">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                         <circle cx="12" cy="12" r="10" fill="#10B981"/>
                     </svg>
-                    <span>grounded</span>
+                    <span>Instant Workspace Query</span>
                 </div>
             </div>
-            <div class="preview-label">Question</div>
-            <div class="preview-question">What are the key safeguards that keep this system grounded in its sources?</div>
-            <div class="sources-indicator">4 sources selected - evidence ready</div>
-            <div class="preview-label">Answer with citations</div>
-            <div class="preview-answer">The system limits generation to retrieved passages, ranks evidence before prompting the model, and returns a clear not-found response whenever the indexed documents do not support an answer. Each response remains connected to the source context used to generate it.</div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
+                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Unit 1 &bull; ML Definitions</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">Summarize Machine Learning definitions and Arthur Samuel's 1959 core concepts</div>
+                </div>
+                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
+                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Unit 2 &bull; Pages 36-54</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">Explain Bayes Theorem, MAP Estimation, and Naïve Bayes from pages 36 to 54</div>
+                </div>
+                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
+                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Decision Theory</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">What are the core equations for Decision Tree Entropy and Information Gain?</div>
+                </div>
+                <div style="border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="showPage('workspace');">
+                    <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Learning Paradigms</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">Compare Supervised, Unsupervised, and Reinforcement Learning paradigms</div>
+                </div>
+            </div>
         </section>
 
         <footer class="landing-footer">
             <div>Context Engine &bull; Python 3.12 RAG API</div>
-            <div>FastAPI &bull; LangChain &bull; FAISS &bull; OpenAI</div>
+            <div>FastAPI &bull; RapidOCR &bull; BM25 Hybrid &bull; OpenRouter LLM</div>
         </footer>
     </div>
 
@@ -1395,7 +1398,6 @@
             </div>
         </div>
     </div>
-
     <!-- See How It Works Modal -->
     <div class="modal-overlay" id="howItWorksModal">
         <div class="modal-card">
@@ -1405,51 +1407,55 @@
             </div>
             <div class="modal-body">
                 <div class="doc-tabs">
-                    <button class="doc-tab active" data-tab="architecture">Architecture</button>
+                    <button class="doc-tab active" data-tab="architecture">How It Works</button>
                     <button class="doc-tab" data-tab="workflows">Workflows</button>
                     <button class="doc-tab" data-tab="code">Core Code</button>
-                    <button class="doc-tab" data-tab="github">GitHub</button>
+                    <button class="doc-tab" data-tab="github">GitHub Repository</button>
                 </div>
                 <div class="doc-tab-content active" id="tab-architecture">
-                    <h4>Pipeline Diagram</h4>
-                    <p>Our workspace uses a dual-engine architecture: combining fast cloud models with a high-efficiency offline keyword fallback mechanism.</p>
+                    <h4>Website & System Architecture</h4>
+                    <p>Context Engine uses a dual-engine Grounded RAG architecture designed to process both native digital PDFs and scanned handwritten notes seamlessly.</p>
                     <div class="diagram-placeholder">
                         <pre style="text-align: left; font-family: monospace; font-size: 0.7rem; color: var(--primary);">
-[PDF] -> [PyMuPDF Fitz Parser] -> [384D Embeddings] -> [FAISS Vector Index]
-                                                              |
-[Query] -> [Gemini API / OpenRouter] --(Failover)--> [TF-IDF Keyword Highlighter]
+[PDF Document] ──> [PyMuPDF + RapidOCR Engine] ──> [Recursive Text Splitter]
+                                                               │
+[LLM Response] <── [BM25 + FAISS Hybrid RRF] <── [384D Vector Embeddings]
                         </pre>
                     </div>
                 </div>
                 <div class="doc-tab-content" id="tab-workflows">
-                    <h4>RAG Execution Steps</h4>
+                    <h4>Complete System Workflows</h4>
                     <ul>
-                        <li><strong>Extraction</strong>: Sub-millisecond text and figure extraction using fitz (PyMuPDF) instead of slower Python parsers.</li>
-                        <li><strong>Projection Matrix</strong>: An exact PCA matrix implementation reduces HuggingFace's 384D vectors to 2D chart coordinates in real-time.</li>
-                        <li><strong>Relevance Scoring</strong>: FAISS filters matches using cosine similarity, with coordinates returned to render visual activated paths.</li>
+                        <li><strong>1. Document Extraction & OCR</strong>: PyMuPDF parses digital text; if text is sparse or image-based, ONNX RapidOCR renders pages at 150 DPI and extracts handwritten text.</li>
+                        <li><strong>2. Hybrid BM25 + FAISS Vector Search</strong>: Combines dense vector similarity with BM25 keyword matching using Reciprocal Rank Fusion (RRF) for 100% precision.</li>
+                        <li><strong>3. Page Range & Citation Matching</strong>: Direct page range queries (e.g. <i>pages 36 to 54</i>) fetch exact page chunks and label them with source citations.</li>
+                        <li><strong>4. Grounded Synthesis</strong>: OpenRouter streaming API synthesizes structured answers backed by exact page references.</li>
                     </ul>
                 </div>
                 <div class="doc-tab-content" id="tab-code">
-                    <h4>Key Fallback Code</h4>
+                    <h4>Core Hybrid Retriever Code</h4>
                     <pre style="text-align: left; background: rgba(0, 0, 0, 0.4); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 0.65rem; color: var(--text-main); overflow-x: auto;">
-# dynamic sentence weighting fallback
-def _fallback_answer(question, docs):
-    words = [w.lower() for w in question.split()]
-    ...
-    return formatted_source_citations
+# Reciprocal Rank Fusion (RRF) Hybrid Search
+for rank, (doc, v_score) in enumerate(vector_results):
+    doc_id = id(doc)
+    rrf_scores[doc_id] += 1.0 / (60 + rank)
+
+for rank, (doc, b_score) in enumerate(bm25_results):
+    doc_id = id(doc)
+    rrf_scores[doc_id] += 1.0 / (60 + rank)
                     </pre>
                 </div>
                 <div class="doc-tab-content" id="tab-github">
-                    <h4>GitHub Code Repository</h4>
+                    <h4>Official GitHub Repository</h4>
                     <div style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.02); margin-top: 0.5rem;">
-                        <strong style="color: var(--primary);">github.com/RAG-Agent/Workspace</strong>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Includes local embedding loaders, FAISS backend indexing files, and the vanilla glassmorphism frontend layout.</p>
-                        <a href="https://github.com" target="_blank" class="export-btn" style="display: inline-flex; margin-top: 0.5rem; text-decoration: none;">Clone Repository</a>
+                        <strong style="color: var(--primary);">Swapnanil-nanda/rag-agent</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Contains the complete FastAPI RAG backend, RapidOCR pipeline, FAISS vector store, BM25 hybrid search, and vanilla glassmorphism UI.</p>
+                        <a href="https://github.com/Swapnanil-nanda/rag-agent" target="_blank" class="export-btn" style="display: inline-flex; margin-top: 0.75rem; text-decoration: none;">View on GitHub &rarr;</a>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </div>>
 
     <script>
         const landingPage = document.getElementById('landingPage');
@@ -1653,24 +1659,7 @@ def _fallback_answer(question, docs):
             drawCanvas();
         }
         
-        async function loadNewsTicker() {
-            try {
-                const res = await fetch('/api/news');
-                const news = await res.json();
-                const container = document.getElementById('newsTickerContent');
-                container.innerHTML = '';
-                const doubledNews = [...news, ...news];
-                doubledNews.forEach(item => {
-                    const el = document.createElement('span');
-                    el.className = 'news-item';
-                    el.innerHTML = `<strong>[${item.topic}]</strong> ${item.headline}`;
-                    container.appendChild(el);
-                });
-            } catch (err) {
-                console.error("Failed to load news:", err);
-            }
-        }
-        loadNewsTicker();
+
 
         let isChatEmpty = true;
         let currentSessionId = null;
