@@ -289,8 +289,20 @@ async def query(request: QueryRequest):
         logger.error(f"Query failed: {e}")
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
+from fastapi.responses import FileResponse
+
+@router.get("/api/sessions/{session_id}/documents/{filename}", tags=["Documents"])
+async def get_session_document(session_id: str, filename: str):
+    session_id = _safe_session_id(session_id)
+    filename = os.path.basename(filename)
+    file_path = os.path.join(settings.documents_path, session_id, filename)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Document file not found.")
+    return FileResponse(file_path)
+
 @router.delete("/api/sessions/{session_id}/documents/{filename}", tags=["Documents"])
 async def delete_session_document(session_id: str, filename: str):
+    session_id = _safe_session_id(session_id)
     filename = os.path.basename(filename)
     file_path = os.path.join(settings.documents_path, session_id, filename)
     try:

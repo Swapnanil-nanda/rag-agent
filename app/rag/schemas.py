@@ -9,6 +9,7 @@ class SessionMetadata(BaseModel):
     session_id: str
     title: str
     filenames: List[str] = Field(default_factory=list)
+    filenames_chunks: Optional[Dict[str, int]] = Field(default_factory=dict)
     history: List[ChatMessage] = Field(default_factory=list)
     suggested_questions: List[str] = Field(default_factory=list)
 

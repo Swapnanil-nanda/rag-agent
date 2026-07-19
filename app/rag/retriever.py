@@ -150,14 +150,14 @@ def retrieve_documents(session_id: str, query: str, k: int = 4, threshold: Optio
         bm25_results = bm25_scorer.get_top_n(q_var, n=max(k * 3, 12))
 
         for rank, (doc, v_score) in enumerate(vector_docs_and_scores):
-            doc_id = id(doc)
+            doc_id = f"{doc.metadata.get('source', '')}_{doc.metadata.get('page', 0)}_{hash(doc.page_content[:150])}"
             doc_map[doc_id] = doc
             rel_percent = max(0, min(100, int((1.0 - (float(v_score) / 2.0)) * 100)))
             doc.metadata["score"] = rel_percent
             rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (1.0 / (60 + rank))
 
         for rank, (doc, b_score) in enumerate(bm25_results):
-            doc_id = id(doc)
+            doc_id = f"{doc.metadata.get('source', '')}_{doc.metadata.get('page', 0)}_{hash(doc.page_content[:150])}"
             doc_map[doc_id] = doc
             rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (1.0 / (60 + rank))
 
