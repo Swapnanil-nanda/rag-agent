@@ -37,7 +37,9 @@ def load_local_vectorstore(session_id: str) -> Optional[FAISS]:
         return None
     try:
         embeddings = get_embeddings_model()
-        return FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
+        vs = FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
+        vs.embedding_function = embeddings
+        return vs
     except Exception as e:
         logger.error(f"Error loading vector store for session {session_id}: {e}")
         return None
