@@ -2092,8 +2092,10 @@ for rank, (doc, b_score) in enumerate(bm25_results):
         });
 
         async function handleFileUpload(file) {
-            if (!file.name.endsWith('.pdf')) {
-                showUploadStatus('Error: Only PDF supported.', true);
+            const allowed = ['.pdf', '.txt', '.md', '.docx', '.csv', '.json', '.py', '.js', '.html', '.css', '.png', '.jpg', '.jpeg'];
+            const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')).toLowerCase() : '';
+            if (!allowed.includes(ext)) {
+                showUploadStatus(`Error: File type '${ext || 'unknown'}' not supported.`, true);
                 return;
             }
             if (file.size > 50 * 1024 * 1024) {
@@ -2104,7 +2106,7 @@ for rank, (doc, b_score) in enumerate(bm25_results):
                 showUploadStatus('Error: Select or create a chat session first.', true);
                 return;
             }
-            showUploadStatus('Analyzing & indexing PDF...', false);
+            showUploadStatus(`Analyzing & indexing ${file.name}...`, false);
             const formData = new FormData();
             formData.append('file', file);
             try {
@@ -2121,7 +2123,7 @@ for rank, (doc, b_score) in enumerate(bm25_results):
                     showUploadStatus(`Failed: ${data.detail || 'Error'}`, true);
                 }
             } catch (err) {
-                showUploadStatus(`Network upload error.`, true);
+                showUploadStatus(`Network upload error. Check local server connection.`, true);
             } finally {
                 fileInput.value = '';
             }
