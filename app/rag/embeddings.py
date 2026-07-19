@@ -6,6 +6,8 @@ class LightweightEmbeddings:
         self.dim = dim
 
     def _text_to_vector(self, text: str) -> list[float]:
+        if not isinstance(text, str):
+            text = str(text or "")
         tokens = text.lower().split()
         if not tokens:
             return [0.0] * self.dim
@@ -23,6 +25,9 @@ class LightweightEmbeddings:
 
     def embed_query(self, text: str) -> list[float]:
         return self._text_to_vector(text)
+
+    def __call__(self, text: str) -> list[float]:
+        return self.embed_query(text)
 
 _embeddings_instance = None
 
