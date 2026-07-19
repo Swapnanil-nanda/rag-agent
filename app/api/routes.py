@@ -167,8 +167,10 @@ def clear_history(session_id: str):
 @router.post("/ingest", response_model=IngestResponse, tags=["RAG"])
 async def ingest(session_id: str, file: UploadFile = File(...)):
     session_id = _safe_session_id(session_id)
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    allowed_exts = {".pdf", ".txt", ".md", ".docx", ".csv", ".json", ".py", ".js", ".html", ".css", ".png", ".jpg", ".jpeg"}
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if not file.filename or ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"Unsupported file format '{ext}'. Supported: PDF, TXT, MD, DOCX, CSV, JSON, Code, Images.")
     try:
         file.file.seek(0, os.SEEK_END)
         file_size = file.file.tell()
@@ -191,10 +193,11 @@ async def ingest(session_id: str, file: UploadFile = File(...)):
     finally:
         await file.close()
     try:
-        docs = await asyncio.to_thread(load_pdf, file_path, session_id)
+        from app.rag.loader import load_document
+        docs = await asyncio.to_thread(load_document, file_path, session_id)
     except Exception as e:
-        logger.error(f"PDF load failed: {e}")
-        raise HTTPException(status_code=400, detail=f"The PDF file is corrupted or invalid: {str(e)}")
+        logger.error(f"Document load failed: {e}")
+        raise HTTPException(status_code=400, detail=f"The file is corrupted or invalid: {str(e)}")
     try:
         chunks = await asyncio.to_thread(split_documents, docs)
         if not chunks:

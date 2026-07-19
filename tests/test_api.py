@@ -10,10 +10,10 @@ def test_health(client):
 
 @patch("app.api.routes.load_metadata", return_value={"session_id": "test", "title": "New Chat", "filenames": [], "history": []})
 @patch("app.api.routes.save_metadata")
-@patch("app.api.routes.load_pdf", return_value=[Document(page_content="mock content")])
+@patch("app.rag.loader.load_document", return_value=[Document(page_content="mock content")])
 @patch("app.api.routes.add_documents_to_store", return_value=1)
 def test_ingest(mock_add, mock_load, mock_save, mock_load_meta, client):
-    file_data = {"file": ("test.pdf", b"%PDF-1.4 mock binary pdf data", "application/pdf")}
+    file_data = {"file": ("test.txt", b"mock text document data", "text/plain")}
     response = client.post("/ingest?session_id=test_session", files=file_data)
     assert response.status_code == 200
     data = response.json()

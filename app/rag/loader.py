@@ -156,3 +156,35 @@ def load_pdf(file_path: str | Path, session_id: str = "default") -> list[Documen
             }
             documents.append(Document(page_content=text, metadata=metadata))
     return documents
+
+def load_document(file_path: str | Path, session_id: str = "default") -> list[Document]:
+    path = Path(file_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"File not found: {path}")
+        
+    ext = path.suffix.lower()
+    if ext == ".pdf":
+        return load_pdf(path, session_id)
+        
+    if ext in [".png", ".jpg", ".jpeg"]:
+        engine = get_ocr_engine()
+        extracted_text = ""
+        if engine:
+            try:
+                with open(path, "rb") as f:
+                    img_bytes = f.read()
+                results, _ = engine(img_bytes)
+                if results:
+                    extracted_text = "\n".join([res[1] for res in results if res and len(res) > 1 and res[1]])
+            except Exception:
+                pass
+        if not extracted_text:
+            extracted_text = f"[Image File: {path.name}]"
+        return [Document(page_content=extracted_text, metadata={"source": str(path), "page": 0, "images": []})]
+
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        return [Document(page_content=content, metadata={"source": str(path), "page": 0, "images": []})]
+    except Exception as e:
+        return [Document(page_content=f"[Error reading file {path.name}: {e}]", metadata={"source": str(path), "page": 0, "images": []})]
