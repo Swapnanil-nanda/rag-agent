@@ -30,17 +30,70 @@ def _ocr_pixmap(pix: fitz.Pixmap) -> str:
         pass
     return ""
 
-def _ocr_bytes(img_bytes: bytes) -> str:
-    engine = get_ocr_engine()
-    if not engine:
+def _extract_page_layout_text(page: fitz.Page) -> str:
+    blocks = page.get_text("blocks")
+    if not blocks:
         return ""
+    
+    text_blocks = [b for b in blocks if len(b) >= 5 and isinstance(b[4], str) and b[4].strip()]
+    if not text_blocks:
+        return ""
+
+    page_rect = page.rect
+    page_width = page_rect.width
+    
+    left_column = []
+    right_column = []
+    full_width = []
+    
+    mid_point = page_width / 2.0
+    for b in text_blocks:
+        x0, y0, x1, y1, content = b[0], b[1], b[2], b[3], b[4]
+        if (x1 - x0) > 0.7 * page_width:
+            full_width.append((y0, content))
+        elif x1 <= mid_point + 20:
+            left_column.append((y0, content))
+        elif x0 >= mid_point - 20:
+            right_column.append((y0, content))
+        else:
+            full_width.append((y0, content))
+            
+    left_column.sort(key=lambda item: item[0])
+    right_column.sort(key=lambda item: item[0])
+    full_width.sort(key=lambda item: item[0])
+    
+    combined = []
+    if left_column or right_column:
+        for y, content in left_column:
+            combined.append(content.strip())
+        for y, content in right_column:
+            combined.append(content.strip())
+        for y, content in full_width:
+            combined.append(content.strip())
+        return "\n\n".join(combined)
+    
+    text_blocks.sort(key=lambda b: (b[1], b[0]))
+    return "\n\n".join([b[4].strip() for b in text_blocks])
+
+def _extract_tables_markdown(page: fitz.Page) -> str:
+    markdown_tables = []
     try:
-        results, _ = engine(img_bytes)
-        if results:
-            return "\n".join([res[1] for res in results if res and len(res) > 1 and res[1]])
+        tabs = page.find_tables()
+        if tabs and tabs.tables:
+            for t_idx, table in enumerate(tabs.tables, start=1):
+                df_data = table.extract()
+                if not df_data or len(df_data) < 2:
+                    continue
+                header = [str(c or "").strip().replace("\n", " ") for c in df_data[0]]
+                separator = ["---"] * len(header)
+                table_lines = ["| " + " | ".join(header) + " |", "| " + " | ".join(separator) + " |"]
+                for row in df_data[1:]:
+                    row_cells = [str(c or "").strip().replace("\n", " ") for c in row]
+                    table_lines.append("| " + " | ".join(row_cells) + " |")
+                markdown_tables.append(f"\n\n### Table {t_idx}\n" + "\n".join(table_lines))
     except Exception:
         pass
-    return ""
+    return "\n".join(markdown_tables)
 
 def load_pdf(file_path: str | Path, session_id: str = "default") -> list[Document]:
     path = Path(file_path)
@@ -51,9 +104,15 @@ def load_pdf(file_path: str | Path, session_id: str = "default") -> list[Documen
     with fitz.open(str(path)) as doc:
         for page_num in range(len(doc)):
             page = doc[page_num]
-            text = page.get_text()
-            
-            should_ocr = len(text.strip()) < 500 or len(text.split()) < 70 or bool(page.get_images())
+            text = _extract_page_layout_text(page)
+            if not text:
+                text = page.get_text()
+                
+            table_md = _extract_tables_markdown(page)
+            if table_md:
+                text = (text + table_md).strip()
+
+            should_ocr = len(text.strip()) < 400 or len(text.split()) < 50 or bool(page.get_images())
             if should_ocr:
                 try:
                     pix = page.get_pixmap(dpi=150)
@@ -93,6 +152,7 @@ def load_pdf(file_path: str | Path, session_id: str = "default") -> list[Documen
                 "source": str(path),
                 "page": page_num,
                 "images": page_images,
+                "has_tables": bool(table_md)
             }
             documents.append(Document(page_content=text, metadata=metadata))
     return documents

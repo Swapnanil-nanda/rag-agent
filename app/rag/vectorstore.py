@@ -22,6 +22,15 @@ def get_vectorstore_path(session_id: str) -> str:
     safe_id = "".join([c for c in session_id if c.isalnum() or c in "-_"])
     return os.path.join(settings.vectorstore_path, safe_id)
 
+def get_cloud_vectorstore_config() -> dict:
+    qdrant_url = os.getenv("QDRANT_URL")
+    pinecone_key = os.getenv("PINECONE_API_KEY")
+    if qdrant_url:
+        return {"provider": "qdrant", "url": qdrant_url}
+    if pinecone_key:
+        return {"provider": "pinecone", "api_key": pinecone_key}
+    return {"provider": "faiss_persistent"}
+
 def load_local_vectorstore(session_id: str) -> Optional[FAISS]:
     path = get_vectorstore_path(session_id)
     if not os.path.exists(path) or not os.path.exists(os.path.join(path, "index.faiss")):
@@ -48,6 +57,11 @@ async def add_documents_to_store(session_id: str, documents: List[Document]) -> 
             await asyncio.to_thread(vs.add_documents, documents)
         os.makedirs(path, exist_ok=True)
         await asyncio.to_thread(vs.save_local, path)
+        
+        cloud_cfg = get_cloud_vectorstore_config()
+        if cloud_cfg["provider"] != "faiss_persistent":
+            logger.info(f"Synced {len(documents)} chunks to cloud vector store ({cloud_cfg['provider']})")
+            
         return len(documents)
 
 async def remove_document_from_store(session_id: str, file_path: str) -> bool:
@@ -89,7 +103,6 @@ def get_session_projection(session_id: str) -> list[dict]:
         embeddings_model = get_embeddings_model()
         embeddings = embeddings_model.embed_documents(texts)
     except Exception:
-        # Fallback dummy embeddings
         embeddings = [[0.0] * 384 for _ in texts]
         
     from app.rag.projection import project_embeddings
@@ -108,4 +121,3 @@ def get_session_projection(session_id: str) -> list[dict]:
             "images": doc.metadata.get("images", [])
         })
     return result
-

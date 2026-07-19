@@ -318,4 +318,14 @@ def get_chunks(session_id: str):
     from app.rag.vectorstore import get_session_projection
     return get_session_projection(session_id)
 
+@router.post("/api/sessions/{session_id}/evaluate", tags=["Evaluation"])
+async def evaluate_session_query(session_id: str, question: str = Query(...), answer: str = Query(...)):
+    session_id = _safe_session_id(session_id)
+    from app.rag.evaluator import evaluate_rag_response
+    from app.rag.retriever import retrieve_documents
+    context_docs = await asyncio.to_thread(retrieve_documents, session_id, question, 4)
+    evaluation_result = evaluate_rag_response(question, answer, context_docs)
+    return evaluation_result
+
+
 
