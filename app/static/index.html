@@ -1880,7 +1880,16 @@ for rank, (doc, b_score) in enumerate(bm25_results):
                 if (data && data.session_id) {
                     currentSessionId = data.session_id;
                     localStorage.setItem('activeSessionId', currentSessionId);
-                    await loadSessions(data.session_id);
+                    const newSess = {
+                        session_id: data.session_id,
+                        title: "New Chat",
+                        filenames: [],
+                        history: [],
+                        suggested_questions: ["What is the summary of this document?", "What are the key points?", "What are the main findings?"]
+                    };
+                    activeSessions.unshift(newSess);
+                    renderSessionsList();
+                    selectSession(currentSessionId);
                     return data.session_id;
                 }
             } catch (err) {
