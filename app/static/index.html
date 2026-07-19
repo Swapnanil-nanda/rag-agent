@@ -2103,8 +2103,11 @@ for rank, (doc, b_score) in enumerate(bm25_results):
                 return;
             }
             if (!currentSessionId) {
-                showUploadStatus('Error: Select or create a chat session first.', true);
-                return;
+                await createSession();
+                if (!currentSessionId) {
+                    showUploadStatus('Error: Could not initialize chat session.', true);
+                    return;
+                }
             }
             showUploadStatus(`Analyzing & indexing ${file.name}...`, false);
             const formData = new FormData();
